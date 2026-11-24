@@ -51,7 +51,7 @@ The answers used for this example: start Monday 7 June 2027, print both names, t
 ## Sun 13 Jun: Aarhus
 
 - ARoS and the old town.
-- Optional, not in the plan: Moesgaard, about twenty minutes south.
+- Optional, not in the plan: a loop south via Skanderborg to Moesgaard, then back to Aarhus. The map draws that ride home as one faint arc, not a reverse of each hop.
 
 ## Mon 14 Jun: Easy day
 

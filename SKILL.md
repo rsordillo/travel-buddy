@@ -131,17 +131,23 @@ Omit `countdown` to hide the "days to go" line. Set `highlight` to `{ "title", "
 
 `subtitle` is an optional second line. On an idea, that is where "Near Meloneras" belongs.
 
-`essentials` is an optional list pinned above the days: the base hotel, the car, the tickets they must not lose. Each item is `{ "id", "title", "text", "refs", "stopId", "links" }`. `stopId` is the pin a click should open. Omit `essentials` when there is nothing to pin.
+`essentials` is an optional list pinned above the days: the base hotel, the car, the tickets they must not lose. Each item is `{ "id", "title", "text", "refs", "stopId", "links", "status" }`. `stopId` is the pin a click should open. Links sit inside the card. The block starts collapsed so day 1 stays in view. Omit `essentials` when there is nothing to pin. Those rows are included at the top of the spreadsheet export, with type `essential`.
+
+A stop with `status` `travel` (a hub or a gateway) exports as booked when it has `refs`. Set `status` to `planned` if a reference should not count as booked.
 
 Use coordinates you are sure of for public places. If a pin is only approximate, say so in `note`.
 
 ### Legs
 
-`id`, `mode`, `day` (a day id, or `null`), `optional`, `title`, `when`, `detail`, `links`, `segments`.
+`id`, `mode`, `day` (a day id, or `null`), `optional`, `status`, `title`, `when`, `detail`, `links`, `segments`.
+
+`status` on a leg is `booked`, `planned`, or `optional`. The spreadsheet export reads it. If you leave it off, a leg with `refs` exports as booked, an optional leg as optional, and every other leg as planned.
 
 Do not give a leg the same id as a day. `d1` is a day, `f1` is a leg. Ids that look alike make the day filter and Play journey open the wrong row.
 
-`returns: true` draws a faint arc back to the start of that leg. Use it for a hub day (hotel, sight, hotel again) so several spokes from one base stay readable. A real one-way hop leaves `returns` off. Set `returnArcs` to `"none"` on the trip if you do not want those faint arcs at all. The default is `"faint"`.
+`returns: true` draws one faint arc from the end of that leg back to its start. It does not reverse every segment. `returnTo` is a stop id when the base is not the start of the leg: one faint arc from the end of the leg back to that stop.
+
+For a hub day with several stops (hotel, then two sights), set `returnTo` on the day instead. The faint arc runs from the day's last stop back to that base, once. A one-way travel day leaves both off. Set `returnArcs` to `"none"` on the trip if you do not want faint arcs at all. The default is `"faint"`.
 
 `start` and `end` are clock times (`09:10`, `12:05`) used by the spreadsheet export. If you leave them off, the map tries to read a `HH:MM to HH:MM` pair out of `when`.
 
@@ -159,7 +165,7 @@ To add a mode the engine does not know, put it in `modeStyles` instead of editin
 
 ### Days
 
-In travel order. Each day is `{ "id", "date", "title", "entries" }`.
+In travel order. Each day is `{ "id", "date", "title", "returnTo", "entries" }`. `returnTo` is the base stop id for one faint arc home from the day's last stop.
 
 An entry is one of:
 
@@ -182,7 +188,7 @@ You do not write any of this. It comes from the template.
 - Play journey draws each planned leg in order, with a moving marker. Space starts and pauses. Arrow keys step. Escape closes the tour and returns the map to the view that was active before Play (The trip, or Island, not whatever the last leg zoomed to). Optional ideas are not part of the tour.
 - A click on a place opens a popup with the notes and the explore links. A click on a line opens the leg.
 - Tiles: if `cartoApiKey` is set, or the page was opened with `?cartoKey=YOUR_KEY` (stored in that browser), the basemap is CARTO Voyager and the legend note stays hidden. With no key the map uses Esri World Topo, then Esri World Street if that layer fails. OpenStreetMap is only tried when the page itself is served over http or https. The legend names the basemap in use and mentions how to add a CARTO key. Attribution stays on the map. The legend starts collapsed so it does not cover the route.
-- Export downloads `<trip-slug>-timeline.csv` (UTF-8 with a BOM, so Excel keeps accents). Copy puts the same table on the clipboard as TSV for Google Sheets. Link columns are `=HYPERLINK("url","label")` formulas, and `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so it cannot become a formula. You can write this file yourself beside the HTML. Columns, in order: Date, Day label, Start time, End time, Type (flight, ferry, train, drive, bus, walk, stop, activity, or idea), Title, From, To, Place, Transport mode, Status (booked, planned, or optional), Refs, Notes, Map link, Explore link 1 to n, All links.
+- Export downloads `<trip-slug>-timeline.csv` (UTF-8 with a BOM, so Excel keeps accents). Copy puts the same table on the clipboard as TSV for Google Sheets. Link columns are `=HYPERLINK("url","label")` formulas, and `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so it cannot become a formula. You can write this file yourself beside the HTML. Columns, in order: Date, Day label, Start time, End time, Type (essential, flight, ferry, train, drive, bus, walk, stop, activity, or idea), Title, From, To, Place, Transport mode, Status (booked, planned, or optional), Refs, Notes, Map link, Explore link 1 to n, All links. Essentials are the first rows.
 
 ## Worked example
 
