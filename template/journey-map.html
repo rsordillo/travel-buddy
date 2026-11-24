@@ -48,6 +48,10 @@
     returns: true draws one faint arc from the end of the leg back to its start (not a reverse of every segment).
     returnTo: a stop id. One faint arc from the end of the leg back to that base.
     On a day, returnTo does the same from the day's last stop, so a hotel, sight, sight, hotel day is one arc home.
+    timezone: an IANA name for the whole trip, for example Europe/London. A stop, leg, or note can set its own.
+    endTimezone on a leg is the zone of the arrival clock, when it differs from the departure (a flight).
+    allDay true forces a date-only calendar event. With no start time, a dated item is all-day anyway.
+    Calendar times are converted to UTC with Intl. The .ics file does not embed VTIMEZONE rules.
     segments: { from, to, c }. c is the curve. Positive bows left of travel, negative bows right, in Mercator space.
     About 0.15 for a long flight, 0.25 to 0.45 for a short hop. Use the opposite sign on a return over the same pair.
     A connecting journey is one leg with several segments, in order.
@@ -117,6 +121,7 @@
   ],
   "modeStyles": {},
   "returnArcs": "faint",
+  "timezone": "Europe/London",
   "essentials": [
     {
       "id": "ess-stay",
@@ -403,6 +408,10 @@
       background: transparent; color: #0f4f5d; font-size: 12px; font-weight: 600;
     }
     .export-btn:hover { background: #eef7f9; }
+    .cal-scope {
+      height: 30px; border: 0; border-radius: 10px; background: transparent; color: #0f4f5d;
+      font-size: 12px; font-weight: 600; padding: 0 2px; cursor: pointer; color-scheme: light;
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     }
@@ -460,6 +469,12 @@
       <div class="inline-flex bg-white/95 backdrop-blur p-0.5 rounded-xl shadow-md" role="group" aria-label="Spreadsheet export">
         <button id="btn-export" type="button" class="export-btn">Export</button>
         <button id="btn-copy-sheets" type="button" class="export-btn" title="Copy for Google Sheets">Copy</button>
+        <button id="btn-calendar" type="button" class="export-btn" title="Download an iCalendar file">Calendar</button>
+        <select id="cal-scope" class="cal-scope" aria-label="Which events go in the calendar file">
+          <option value="booked">Booked</option>
+          <option value="timed" selected>Timed</option>
+          <option value="all">All</option>
+        </select>
       </div>
       <div id="view-switcher" class="inline-flex bg-white/95 backdrop-blur p-0.5 rounded-xl shadow-md" role="group" aria-label="Map view"></div>
       <button id="btn-play-tour" type="button" aria-label="Play journey"
@@ -1088,6 +1103,7 @@
       + (s.note ? '<p class="mt-2 text-[11px] text-slate-500">' + esc(s.note) + '</p>' : '')
       + refChips(s.refs)
       + linkRow(s.links)
+      + calendarLinksHtml(eventForStop(s))
       + '</div>';
   }
   function popupOpts() {
@@ -1255,12 +1271,25 @@
   function itemButton(opts) {
     var b = document.createElement('button');
     b.type = 'button';
-    b.id = opts.id;
-    b.className = 'tl-item w-full text-left flex items-start gap-2.5 px-2.5 py-2 rounded-lg hover:bg-ocean-50/70';
-    Object.keys(opts.data || {}).forEach(function (k) { b.dataset[k] = opts.data[k]; });
+    b.className = 'w-full text-left flex items-start gap-2.5 px-2.5 py-2 rounded-lg hover:bg-ocean-50/70';
     b.innerHTML = opts.html;
     b.addEventListener('click', opts.onClick);
-    return b;
+    if (!opts.extraHtml) {
+      b.id = opts.id;
+      b.classList.add('tl-item');
+      Object.keys(opts.data || {}).forEach(function (k) { b.dataset[k] = opts.data[k]; });
+      return b;
+    }
+    var wrap = document.createElement('div');
+    wrap.id = opts.id;
+    wrap.className = 'tl-item';
+    Object.keys(opts.data || {}).forEach(function (k) { wrap.dataset[k] = opts.data[k]; });
+    wrap.appendChild(b);
+    var extra = document.createElement('div');
+    extra.className = 'px-2.5 pb-1 flex flex-wrap';
+    extra.innerHTML = opts.extraHtml;
+    wrap.appendChild(extra);
+    return wrap;
   }
   function legRow(leg) {
     var look = appearance(leg);
@@ -1281,6 +1310,7 @@
         + esc(leg.title) + dot + '</span>'
         + '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(sub) + '</span>'
         + refChips(leg.refs) + '</span>',
+      extraHtml: calendarLinksHtml(eventForLeg(leg)),
       onClick: function () { pauseTourForUser(); selectLeg(leg.id, { fit: true }); }
     });
   }
@@ -1294,6 +1324,7 @@
         + '<span class="min-w-0 flex-1"><span class="flex items-center gap-1.5 text-[13px] font-medium text-ocean-900 leading-snug">' + esc(s.name) + '</span>'
         + '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(s.subtitle || s.when || st.label) + '</span>'
         + refChips(s.refs) + '</span>',
+      extraHtml: calendarLinksHtml(eventForStop(s)),
       onClick: function () { pauseTourForUser(); focusStop(s.id); }
     });
   }
@@ -1304,6 +1335,7 @@
       html: '<span class="mt-0.5 shrink-0 text-ocean-600">' + ICONS.stay + '</span>'
         + '<span class="min-w-0 flex-1"><span class="block text-[13px] font-medium text-ocean-900 leading-snug">' + esc(entry.title || 'Stay put') + '</span>'
         + (entry.text ? '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(entry.text) + '</span>' : '') + '</span>',
+      extraHtml: calendarLinksHtml(eventForNote(entry, dayId, idx)),
       onClick: function () {
         pauseTourForUser();
         if (entry.stopId) focusStop(entry.stopId);
@@ -1498,6 +1530,7 @@
       + ((leg.returns || leg.returnTo) ? '<p class="text-[11px] text-slate-400 mt-1.5">Faint line back to the base.</p>' : '')
       + refChips(leg.refs)
       + linkRow(leg.links)
+      + calendarLinksHtml(eventForLeg(leg))
       + '</div>';
   }
   var legPopup = L.popup(popupOpts());
@@ -2011,6 +2044,7 @@
     row._map = links.mapLink;
     row._explore = links.explore;
     row._all = links.all;
+    attachCalendarCells(row, 'leg-' + leg.id);
     return row;
   }
   function stopTimelineRow(stop, day) {
@@ -2031,6 +2065,7 @@
     row._map = links.mapLink;
     row._explore = links.explore;
     row._all = links.all;
+    attachCalendarCells(row, 'stop-' + stop.id + '-' + (day && day.id ? day.id : 'x'));
     return row;
   }
   function noteTimelineRow(entry, day) {
@@ -2052,6 +2087,7 @@
       row._explore = links.explore;
       row._all = links.all;
     }
+    attachCalendarCells(row, 'note-' + (day && day.id ? day.id : 'x') + '-' + (entry._idx != null ? entry._idx : '0'));
     return row;
   }
   function essentialTimelineRow(item) {
@@ -2068,6 +2104,7 @@
     row._map = links.mapLink;
     row._explore = links.explore;
     row._all = links.all;
+    attachCalendarCells(row, 'essential-' + (item.id || 'item'));
     return row;
   }
   function timelineRows() {
@@ -2075,7 +2112,7 @@
     var seenLegs = {};
     var seenStops = {};
     (TRIP.days || []).forEach(function (day) {
-      (day.entries || []).forEach(function (entry) {
+      (day.entries || []).forEach(function (entry, idx) {
         if (entry.type === 'leg' && legById[entry.id]) {
           rows.push(legTimelineRow(legById[entry.id], day));
           seenLegs[entry.id] = true;
@@ -2083,7 +2120,10 @@
         } else if (entry.type === 'stop' && stopById[entry.id]) {
           rows.push(stopTimelineRow(stopById[entry.id], day));
           seenStops[entry.id] = true;
-        } else if (entry.type === 'note') rows.push(noteTimelineRow(entry, day));
+        } else if (entry.type === 'note') {
+          entry._idx = idx;
+          rows.push(noteTimelineRow(entry, day));
+        }
       });
     });
     (TRIP.legs || []).forEach(function (leg) {
@@ -2106,6 +2146,9 @@
     headers.push('Map link');
     for (var i = 1; i <= exploreCount; i++) headers.push('Explore link ' + i);
     headers.push('All links');
+    headers.push('Add to Google Calendar');
+    headers.push('Add to Outlook');
+    headers.push('Add to Outlook (work)');
     var body = rows.map(function (row) {
       var cells = TIMELINE_COLS.map(function (col) { return guardSheetText(row[col]); });
       cells.push(row._map ? hyperlinkFormula(row._map.url, row._map.label) : '');
@@ -2114,6 +2157,9 @@
         cells.push(link ? hyperlinkFormula(link.url, link.label) : '');
       }
       cells.push(guardSheetText(row._all));
+      cells.push(row._google ? hyperlinkFormula(row._google, 'Add to Google Calendar') : '');
+      cells.push(row._outlook ? hyperlinkFormula(row._outlook, 'Add to Outlook') : '');
+      cells.push(row._outlookWork ? hyperlinkFormula(row._outlookWork, 'Add to Outlook (work)') : '');
       return cells;
     });
     return { headers: headers, body: body };
@@ -2162,8 +2208,355 @@
       navigator.clipboard.writeText(text).then(ok, fallback);
     } else fallback();
   }
+  /* ---------- calendar ----------
+   * Wall-clock times are converted to UTC with Intl and the IANA zone
+   * (TRIP.timezone, or timezone / endTimezone on the item). The file uses
+   * DTSTART/DTEND in UTC, not a VTIMEZONE block, so Outlook, Google and
+   * Apple all share one instant. All-day items use VALUE=DATE.
+   */
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function tripYear() {
+    if (TRIP.year) return Number(TRIP.year);
+    var src = (TRIP.countdown && TRIP.countdown.start) || '';
+    var m = String(src).match(/^(\d{4})/);
+    return m ? Number(m[1]) : new Date().getUTCFullYear();
+  }
+  function parseDayDate(label) {
+    if (!label) return null;
+    var iso = String(label).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return iso[1] + iso[2] + iso[3];
+    var m = String(label).match(/(\d{1,2})\s+([A-Za-z]{3,})/);
+    if (!m) return null;
+    var months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+    var month = months[m[2].slice(0, 3).toLowerCase()];
+    if (!month) return null;
+    return String(tripYear()) + pad2(month) + pad2(m[1]);
+  }
+  function ymdAdd(ymd, days) {
+    var dt = new Date(Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8) + days));
+    return dt.getUTCFullYear() + pad2(dt.getUTCMonth() + 1) + pad2(dt.getUTCDate());
+  }
+  function zoneParts(date, timeZone) {
+    var zone = timeZone || 'UTC';
+    var dtf;
+    try {
+      dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: zone, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) {
+      if (zone === 'UTC') throw e;
+      return zoneParts(date, 'UTC');
+    }
+    var map = {};
+    dtf.formatToParts(date).forEach(function (p) { if (p.type !== 'literal') map[p.type] = p.value; });
+    return { y: +map.year, mo: +map.month, d: +map.day, hh: map.hour === '24' ? 0 : +map.hour, mm: +map.minute };
+  }
+  function wallToUtc(ymd, hhmm, timeZone) {
+    var y = +ymd.slice(0, 4), mo = +ymd.slice(4, 6), d = +ymd.slice(6, 8);
+    var bits = String(hhmm || '00:00').split(':');
+    var hh = +bits[0], mm = +bits[1] || 0;
+    var utc = Date.UTC(y, mo - 1, d, hh, mm, 0);
+    for (var i = 0; i < 4; i++) {
+      var shown = zoneParts(new Date(utc), timeZone || 'UTC');
+      var delta = Date.UTC(y, mo - 1, d, hh, mm, 0) - Date.UTC(shown.y, shown.mo - 1, shown.d, shown.hh, shown.mm, 0);
+      if (!delta) break;
+      utc += delta;
+    }
+    return new Date(utc);
+  }
+  function formatUtcBasic(date) {
+    return date.getUTCFullYear() + pad2(date.getUTCMonth() + 1) + pad2(date.getUTCDate())
+      + 'T' + pad2(date.getUTCHours()) + pad2(date.getUTCMinutes()) + pad2(date.getUTCSeconds()) + 'Z';
+  }
+  function formatUtcIso(date) {
+    return date.getUTCFullYear() + '-' + pad2(date.getUTCMonth() + 1) + '-' + pad2(date.getUTCDate())
+      + 'T' + pad2(date.getUTCHours()) + ':' + pad2(date.getUTCMinutes()) + ':' + pad2(date.getUTCSeconds()) + 'Z';
+  }
+  function clockMinutes(hhmm) {
+    var bits = String(hhmm).split(':');
+    return (+bits[0]) * 60 + (+bits[1] || 0);
+  }
+  function makeLegEvent(leg, day, ymd) {
+    if (!ymd) return null;
+    var segs = segmentsOf(leg);
+    var from = segs.length ? stopById[segs[0].from] : null;
+    var to = segs.length ? stopById[segs[segs.length - 1].to] : null;
+    var clock = clockFrom(leg.when || '', leg);
+    return {
+      id: 'leg-' + leg.id,
+      fileSlug: 'leg-' + leg.id,
+      kind: 'leg',
+      optional: isOptional(leg),
+      status: sheetStatus(leg.status, isOptional(leg), leg.refs),
+      title: leg.title || 'Travel',
+      location: to ? to.name : (from ? from.name : ''),
+      lat: to && to.coords ? to.coords[0] : null,
+      lng: to && to.coords ? to.coords[1] : null,
+      notes: [leg.detail, leg.subtitle].filter(Boolean).join(' '),
+      refs: refList(leg.refs),
+      links: cleanLinks(leg.links),
+      ymd: ymd,
+      start: clock.start,
+      end: clock.end,
+      allDay: !!leg.allDay || !clock.start,
+      startZone: leg.timezone || (from && from.timezone) || (to && to.timezone) || TRIP.timezone || 'UTC',
+      endZone: leg.endTimezone || (to && to.timezone) || leg.timezone || (from && from.timezone) || TRIP.timezone || 'UTC'
+    };
+  }
+  function makeStopEvent(stop, day, ymd) {
+    if (!ymd) return null;
+    var clock = clockFrom(stop.when || '', stop);
+    return {
+      id: 'stop-' + stop.id + '-' + (day && day.id ? day.id : 'x'),
+      fileSlug: 'stop-' + stop.id,
+      kind: 'stop',
+      optional: isIdeaStop(stop),
+      status: sheetStatus(stop.status, isIdeaStop(stop), stop.refs),
+      title: stop.name || 'Stop',
+      location: stop.name || '',
+      lat: stop.coords ? stop.coords[0] : null,
+      lng: stop.coords ? stop.coords[1] : null,
+      notes: [].concat(stop.lines || [], stop.note ? [stop.note] : []).join(' '),
+      refs: refList(stop.refs),
+      links: cleanLinks(stop.links),
+      ymd: ymd,
+      start: clock.start,
+      end: clock.end,
+      allDay: !!stop.allDay || !clock.start,
+      startZone: stop.timezone || TRIP.timezone || 'UTC',
+      endZone: stop.timezone || TRIP.timezone || 'UTC'
+    };
+  }
+  function makeNoteEvent(entry, day, ymd, idx) {
+    if (!ymd) return null;
+    var place = entry.stopId && stopById[entry.stopId] ? stopById[entry.stopId] : null;
+    var clock = clockFrom(entry.when || '', entry);
+    return {
+      id: 'note-' + (day && day.id ? day.id : 'x') + '-' + idx,
+      fileSlug: 'note-' + (day && day.id ? day.id : 'x') + '-' + idx,
+      kind: 'activity',
+      optional: false,
+      status: 'planned',
+      title: entry.title || 'Stay put',
+      location: place ? place.name : '',
+      lat: place && place.coords ? place.coords[0] : null,
+      lng: place && place.coords ? place.coords[1] : null,
+      notes: entry.text || '',
+      refs: [],
+      links: place ? cleanLinks(place.links) : [],
+      ymd: ymd,
+      start: clock.start,
+      end: clock.end,
+      allDay: !!entry.allDay || !clock.start,
+      startZone: entry.timezone || (place && place.timezone) || TRIP.timezone || 'UTC',
+      endZone: entry.timezone || (place && place.timezone) || TRIP.timezone || 'UTC'
+    };
+  }
+  function buildAllEvents() {
+    var events = [];
+    var seen = {};
+    (TRIP.days || []).forEach(function (day) {
+      var ymd = parseDayDate(day.date);
+      (day.entries || []).forEach(function (entry, idx) {
+        var ev = null;
+        if (entry.type === 'leg' && legById[entry.id]) ev = makeLegEvent(legById[entry.id], day, ymd);
+        else if (entry.type === 'stop' && stopById[entry.id]) ev = makeStopEvent(stopById[entry.id], day, ymd);
+        else if (entry.type === 'note') ev = makeNoteEvent(entry, day, ymd, idx);
+        if (ev) { events.push(ev); seen[ev.id] = true; }
+      });
+    });
+    (TRIP.legs || []).forEach(function (leg) {
+      if (!isOptional(leg) || seen['leg-' + leg.id]) return;
+      var day = leg.day && dayById[leg.day];
+      var ev = makeLegEvent(leg, day || null, day ? parseDayDate(day.date) : null);
+      if (ev) events.push(ev);
+    });
+    return events;
+  }
+  var _eventCache = null;
+  function collectEvents(scope) {
+    if (!_eventCache) _eventCache = buildAllEvents();
+    return _eventCache.filter(function (ev) { return includeEvent(ev, scope || 'all'); });
+  }
+  function includeEvent(ev, scope) {
+    if (scope === 'all') return true;
+    if (scope === 'booked') return ev.kind === 'leg' && ev.status === 'booked';
+    return !ev.optional && !ev.allDay;
+  }
+  function eventById(id) {
+    var all = collectEvents('all');
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+  function eventForLeg(leg) { return leg ? eventById('leg-' + leg.id) : null; }
+  function eventForStop(stop) {
+    if (!stop) return null;
+    var all = collectEvents('all');
+    for (var i = 0; i < all.length; i++) if (all[i].id.indexOf('stop-' + stop.id + '-') === 0) return all[i];
+    return null;
+  }
+  function eventForNote(entry, dayId, idx) { return eventById('note-' + dayId + '-' + idx); }
+  function eventInstants(ev) {
+    if (ev.allDay) return { allDay: true, start: ev.ymd, end: ev.endYmd || ymdAdd(ev.ymd, 1) };
+    var endClock = ev.end;
+    var endYmd = ev.ymd;
+    if (endClock && clockMinutes(endClock) <= clockMinutes(ev.start)) endYmd = ymdAdd(ev.ymd, 1);
+    var start = wallToUtc(ev.ymd, ev.start, ev.startZone);
+    var end = endClock ? wallToUtc(endYmd, endClock, ev.endZone) : new Date(start.getTime() + 3600000);
+    return { allDay: false, start: start, end: end };
+  }
+  function descriptionOf(ev) {
+    var parts = [];
+    if (ev.notes) parts.push(ev.notes);
+    if (ev.refs && ev.refs.length) parts.push('Refs: ' + ev.refs.join('; '));
+    (ev.links || []).forEach(function (link) { parts.push(link.label + ': ' + link.url); });
+    return parts.join('\n');
+  }
+  function icsText(value) {
+    return String(value == null ? '' : value)
+      .replace(/\\/g, '\\\\')
+      .replace(/\r\n|\n|\r/g, '\\n')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,');
+  }
+  function foldLine(line) {
+    var encoder = new TextEncoder();
+    var limit = 75;
+    var out = '';
+    var buf = '';
+    var size = 0;
+    for (var i = 0; i < line.length;) {
+      var cp = line.codePointAt(i);
+      var ch = String.fromCodePoint(cp);
+      i += ch.length;
+      var n = encoder.encode(ch).length;
+      if (size + n > limit && buf) {
+        out += (out ? '\r\n ' : '') + buf;
+        buf = ch;
+        size = n;
+        limit = 74;
+      } else {
+        buf += ch;
+        size += n;
+      }
+    }
+    return out + (out ? '\r\n ' : '') + buf;
+  }
+  function buildIcs(events) {
+    var lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Travel Buddy//Journey Map//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:' + icsText(TRIP.title || 'Journey')
+    ];
+    var stamp = formatUtcBasic(new Date());
+    events.forEach(function (ev) {
+      var when = eventInstants(ev);
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:' + icsText(tripSlug() + '-' + ev.id + '@travel-buddy'));
+      lines.push('DTSTAMP:' + stamp);
+      if (when.allDay) {
+        lines.push('DTSTART;VALUE=DATE:' + when.start);
+        lines.push('DTEND;VALUE=DATE:' + when.end);
+      } else {
+        lines.push('DTSTART:' + formatUtcBasic(when.start));
+        lines.push('DTEND:' + formatUtcBasic(when.end));
+      }
+      lines.push('SUMMARY:' + icsText(ev.title));
+      if (ev.location) lines.push('LOCATION:' + icsText(ev.location));
+      if (ev.lat != null && ev.lng != null) lines.push('GEO:' + Number(ev.lat).toFixed(6) + ';' + Number(ev.lng).toFixed(6));
+      var desc = descriptionOf(ev);
+      if (desc) lines.push('DESCRIPTION:' + icsText(desc));
+      if (ev.links && ev.links[0]) lines.push('URL:' + icsText(ev.links[0].url));
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.map(foldLine).join('\r\n') + '\r\n';
+  }
+  function googleUrl(ev) {
+    var when = eventInstants(ev);
+    var dates = when.allDay ? (when.start + '/' + when.end) : (formatUtcBasic(when.start) + '/' + formatUtcBasic(when.end));
+    var q = new URLSearchParams();
+    q.set('action', 'TEMPLATE');
+    q.set('text', ev.title);
+    q.set('dates', dates);
+    if (ev.location) q.set('location', ev.location);
+    var details = descriptionOf(ev);
+    if (details) q.set('details', details.slice(0, 1500));
+    return 'https://calendar.google.com/calendar/render?' + q.toString();
+  }
+  function outlookUrl(ev, host) {
+    var when = eventInstants(ev);
+    var base = host === 'office'
+      ? 'https://outlook.office.com/calendar/0/deeplink/compose'
+      : 'https://outlook.live.com/calendar/0/deeplink/compose';
+    var q = new URLSearchParams();
+    q.set('path', '/calendar/action/compose');
+    q.set('rru', 'addevent');
+    q.set('subject', ev.title);
+    if (when.allDay) {
+      q.set('startdt', when.start.slice(0, 4) + '-' + when.start.slice(4, 6) + '-' + when.start.slice(6, 8));
+      q.set('enddt', when.end.slice(0, 4) + '-' + when.end.slice(4, 6) + '-' + when.end.slice(6, 8));
+      q.set('allday', 'true');
+    } else {
+      q.set('startdt', formatUtcIso(when.start));
+      q.set('enddt', formatUtcIso(when.end));
+      q.set('allday', 'false');
+    }
+    if (ev.location) q.set('location', ev.location);
+    var body = descriptionOf(ev);
+    if (body) q.set('body', body.slice(0, 1500));
+    return base + '?' + q.toString();
+  }
+  function calendarLinksHtml(ev) {
+    if (!ev) return '';
+    return '<span class="cal-links">'
+      + '<button type="button" class="ref-chip" data-cal-id="' + esc(ev.id) + '">Add to calendar</button>'
+      + '<a class="ref-chip" style="background:#eef7f9;color:#146272" href="' + esc(googleUrl(ev)) + '" target="_blank" rel="noopener noreferrer">Google</a>'
+      + '<a class="ref-chip" style="background:#eef7f9;color:#146272" href="' + esc(outlookUrl(ev, 'live')) + '" target="_blank" rel="noopener noreferrer">Outlook</a>'
+      + '<a class="ref-chip" style="background:#eef7f9;color:#146272" href="' + esc(outlookUrl(ev, 'office')) + '" target="_blank" rel="noopener noreferrer">Outlook work</a>'
+      + '</span>';
+  }
+  function attachCalendarCells(row, id) {
+    var ev = eventById(id);
+    row._google = ev ? googleUrl(ev) : '';
+    row._outlook = ev ? outlookUrl(ev, 'live') : '';
+    row._outlookWork = ev ? outlookUrl(ev, 'office') : '';
+  }
+  function downloadBlob(filename, mime, text) {
+    var blob = new Blob([text], { type: mime });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+  function icsFor(scope) { return buildIcs(collectEvents(scope || 'timed')); }
+  function downloadCalendar() {
+    var scope = (el('cal-scope') && el('cal-scope').value) || 'timed';
+    var events = collectEvents(scope);
+    if (!events.length) { toast('No events in that set.'); return; }
+    downloadBlob(tripSlug() + '.ics', 'text/calendar;charset=utf-8', buildIcs(events));
+    toast('Downloaded ' + events.length + ' calendar events.');
+  }
+
   el('btn-export').addEventListener('click', downloadTimeline);
   el('btn-copy-sheets').addEventListener('click', copyTimeline);
+  el('btn-calendar').addEventListener('click', downloadCalendar);
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-cal-id]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var ev = eventById(btn.getAttribute('data-cal-id'));
+    if (!ev) return;
+    downloadBlob(tripSlug() + '-' + ev.fileSlug + '.ics', 'text/calendar;charset=utf-8', buildIcs([ev]));
+    toast('Downloaded one calendar event.');
+  });
 
   /* ---------- boot ---------- */
   renderSidebar();
@@ -2179,7 +2572,8 @@
   window.journeyMap = {
     map: map, setView: setView, startTour: startTour, stopTour: stopTour, goToStep: goToStep,
     selectLeg: selectLeg, focusStop: focusStop, setSheet: setSheet, filters: filters, tour: tour, legState: legState,
-    timelineCsv: timelineCsv, timelineTsv: timelineTsv, guardSheetText: guardSheetText, tripSlug: tripSlug
+    timelineCsv: timelineCsv, timelineTsv: timelineTsv, guardSheetText: guardSheetText, tripSlug: tripSlug,
+    icsFor: icsFor, buildIcs: buildIcs, collectEvents: collectEvents
   };
 })();
 </script>

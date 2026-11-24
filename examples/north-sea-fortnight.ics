@@ -1,0 +1,42 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Travel Buddy//Journey Map//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:North Sea fortnight
+BEGIN:VEVENT
+UID:north-sea-fortnight-leg-f1@travel-buddy
+DTSTAMP:20261124T223957Z
+DTSTART:20270607T081000Z
+DTEND:20270607T100500Z
+SUMMARY:Edinburgh to Bergen
+LOCATION:Bergen
+GEO:60.397300;5.323400
+DESCRIPTION:Direct flight\, about two hours in the air.\nRefs: NA7K2P
+END:VEVENT
+BEGIN:VEVENT
+UID:north-sea-fortnight-leg-fy1@travel-buddy
+DTSTAMP:20261124T223957Z
+DTSTART:20270610T183000Z
+DTEND:20270611T060000Z
+SUMMARY:Bergen to Hirtshals
+LOCATION:Hirtshals
+GEO:57.595500;9.963500
+DESCRIPTION:Overnight ferry\, cabin for two.\nRefs: NS-88421\nMap: Hirtshal
+ s: https://www.google.com/maps/search/?api=1&query=Hirtshals+ferry+termina
+ l\nPort info: https://www.visitnordjylland.com/
+URL:https://www.google.com/maps/search/?api=1&query=Hirtshals+ferry+termina
+ l
+END:VEVENT
+BEGIN:VEVENT
+UID:north-sea-fortnight-leg-f2@travel-buddy
+DTSTAMP:20261124T223957Z
+DTSTART:20270620T164000Z
+DTEND:20270620T181000Z
+SUMMARY:Amsterdam to Edinburgh
+LOCATION:Edinburgh Airport
+GEO:55.950800;-3.361500
+DESCRIPTION:Direct flight. The clock goes back an hour on landing.\nRefs: N
+ A7K2P
+END:VEVENT
+END:VCALENDAR

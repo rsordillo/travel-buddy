@@ -2,7 +2,7 @@
 
 An agent skill that turns your trip description into an interactive journey map and timeline spreadsheet.
 
-You paste a rough plan. The skill asks one short batch of questions about anything that is still ambiguous, drafts an itinerary for you to confirm, then fills a template. The result is one HTML journey map you can open in a browser, and a timeline spreadsheet from Export. No build, no account, no server.
+You paste a rough plan. The skill asks one short batch of questions about anything that is still ambiguous, drafts an itinerary for you to confirm, then fills a template. The result is one HTML journey map you can open in a browser, and a timeline spreadsheet from Export. A calendar file is separate, and only if you ask for it. No build, no account, no server.
 
 The example file is in this repo, so anyone can open it with no login. A source preview is at [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/rsordillo/travel-buddy/blob/main/examples/north-sea-fortnight.html). That preview does not run the Leaflet script (it only fetches scripts that live on raw.githubusercontent.com), so the tiles do not draw there. Open [`examples/north-sea-fortnight.html`](examples/north-sea-fortnight.html) itself, or enable GitHub Pages on `main`, to see the map. Pages would serve the same file from the Pages host with no login.
 
@@ -18,9 +18,11 @@ A place popup, with links out:
 
 ![A popup for Bergen, with links to Google Maps, Wikipedia, and the official visitor site](docs/example-popup.png)
 
-Export and Copy sit in the top bar. Export downloads a CSV that Excel and Google Sheets can open. Copy puts the same table on the clipboard.
+Export and Copy sit in the top bar. Export downloads a CSV that Excel and Google Sheets can open. Copy puts the same table on the clipboard. Calendar downloads an `.ics` file for the set you pick (booked legs, timed items, or everything dated). Each event also has Add to calendar, Google, and Outlook.
 
-![Export and Copy in the top bar](docs/example-export.png)
+![Export, Copy, and Calendar in the top bar](docs/example-export.png)
+
+![Add to calendar, Google, and Outlook on a place](docs/example-calendar.png)
 
 ![A short tour of play, the view switcher, filters, and a place popup](docs/demo.gif)
 
@@ -34,6 +36,7 @@ The people, dates, and booking references are invented. Nothing in the example i
 - The note that started it: [`examples/example-prompt.md`](examples/example-prompt.md)
 - The itinerary after one round of questions: [`examples/example-itinerary.md`](examples/example-itinerary.md)
 - The spreadsheet the Export button writes: [`examples/north-sea-fortnight-timeline.csv`](examples/north-sea-fortnight-timeline.csv)
+- The calendar file (the Timed set, which is what the Calendar button downloads until you change the menu): [`examples/north-sea-fortnight.ics`](examples/north-sea-fortnight.ics)
 
 On the map, Space starts and pauses the tour. The arrow keys step through legs. Escape closes it and restores the view from before Play.
 
@@ -62,11 +65,13 @@ The legend names whichever basemap is actually showing, and says how to add a CA
 
 The key request page is [carto.com/basemaps](https://carto.com/basemaps).
 
-Fonts, Tailwind, and Leaflet are loaded from CDNs, so the file needs a network connection the first time you open it. The trip itself is all in the file. Export and Copy need no extra library, and Export works from a file you opened off disk.
+Fonts, Tailwind, and Leaflet are loaded from CDNs, so the file needs a network connection the first time you open it. The trip itself is all in the file. Export, Copy, and Calendar need no extra library, and they work from a file you opened off disk.
 
 ## Spreadsheet
 
-Export builds `<trip-slug>-timeline.csv` in the browser. The file is UTF-8 with a byte order mark, so Excel keeps accents. Each row is one part of the plan, in order: a leg, a stop, or a quiet day. Link columns are `=HYPERLINK` formulas (a map link, then further links, each with its own label). `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so a note cannot turn into a formula. Copy does the same table as tab-separated text, for a paste into Google Sheets.
+Export builds `<trip-slug>-timeline.csv` in the browser. The file is UTF-8 with a byte order mark, so Excel keeps accents. Each row is one part of the plan, in order: an essential, then a leg, a stop, or a quiet day. Link columns are `=HYPERLINK` formulas (a map link, then further links, each with its own label, then Add to Google Calendar, Add to Outlook, and Add to Outlook work). `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so a note cannot turn into a formula. Copy does the same table as tab-separated text, for a paste into Google Sheets.
+
+Calendar is opt-in. After the map is ready the skill asks whether you want the events on a calendar, which set (booked legs, all timed items, or everything dated), and how. If the agent has a calendar connection it can create the events there, but only after you confirm the list. It never invites other people unless you confirm those attendees. Otherwise it hands you one `.ics` file, and the map already has a Google link and an Outlook link on each event. The file uses UTC so Outlook, Google Calendar, and Apple Calendar agree on the instant. A time such as 09:10 in `Europe/Oslo` is converted with that zone. Items with no clock time are all-day. The map's Calendar button downloads the set you pick. The example file is the Timed set: the three journeys that have a clock time. Add to calendar on a card downloads just that event. Apple Calendar uses the file.
 
 ## Layout
 

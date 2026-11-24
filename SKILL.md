@@ -74,7 +74,22 @@ Then check, before you hand the file over:
 - Idea rows that need a place line set `subtitle` (for example `Near Meloneras`).
 - Chip wording is `modeStyles`. To label the road chip Drives, set `"drive": { "label": "Drives", "name": "Drive" }`.
 
-Tell them how to open the file (double-click it, or drag it into a browser) and how to add a CARTO key if they want Voyager tiles. With no key the map uses Esri World Topo, then Esri World Street if those tiles fail. The legend names that basemap. Voyager hides the note. Export, in the top bar, downloads a CSV of the same trip. You can also write that CSV yourself, next to the HTML, using the columns below.
+Tell them how to open the file (double-click it, or drag it into a browser) and how to add a CARTO key if they want Voyager tiles. With no key the map uses Esri World Topo, then Esri World Street if those tiles fail. The legend names that basemap. Voyager hides the note. Export, in the top bar, downloads a CSV of the same trip. Calendar downloads an `.ics` file. You can also write that CSV and that `.ics` yourself, next to the HTML.
+
+### 5. Calendar invites, only if they want them
+
+Do not add anything to a calendar until they say yes. After the itinerary and the map are ready, ask one question: do they want these events in their calendar, and which set?
+
+- Booked legs only.
+- All timed items (a start time, and not an optional idea).
+- Everything dated, including all-day stays and optional ideas.
+
+If they say no, stop. If they say yes, ask how, unless they already picked.
+
+- If this agent has a calendar tool or connector (Google Calendar, Outlook, Apple, or an MCP calendar), offer to create the events with that tool. List the events you would add (title, when, where). Wait for an explicit yes before you create any of them. Never send invitations to other people unless they confirm those attendees in the same breath. Do not invent email addresses.
+- Otherwise, or if they would rather have a file, give them one `.ics` of the chosen set, plus the per-event Google Calendar and Outlook links. Apple Calendar opens the `.ics`. The map also has a Calendar button (Booked, Timed, or All) and an Add to calendar control on each event.
+
+Times are stored as UTC in the `.ics` file. A wall-clock time plus an IANA zone (`timezone` on the trip, the stop, or the leg, and `endTimezone` when the arrival zone differs) is converted with the platform timezone data. There is no VTIMEZONE block. An item with no start time is all-day (`VALUE=DATE`). Set `allDay: true` to force that.
 
 ## Filling TRIP
 
@@ -149,7 +164,7 @@ Do not give a leg the same id as a day. `d1` is a day, `f1` is a leg. Ids that l
 
 For a hub day with several stops (hotel, then two sights), set `returnTo` on the day instead. The faint arc runs from the day's last stop back to that base, once. A one-way travel day leaves both off. Set `returnArcs` to `"none"` on the trip if you do not want faint arcs at all. The default is `"faint"`.
 
-`start` and `end` are clock times (`09:10`, `12:05`) used by the spreadsheet export. If you leave them off, the map tries to read a `HH:MM to HH:MM` pair out of `when`.
+`start` and `end` are clock times (`09:10`, `12:05`). `timezone` is an IANA name (`Europe/Oslo`). On a leg, `endTimezone` is the arrival zone when it is not the departure zone. `allDay: true` makes a date-only event. With no `start`, a dated item is all-day anyway. The spreadsheet and the calendar file both use these fields.
 
 `mode` is `flight`, `ferry`, `train`, `drive`, `bus`, `walk`, or `idea`. The engine already styles those. `modes` on TRIP lists which chips to show. Include `idea` if anything is optional.
 
@@ -188,8 +203,9 @@ You do not write any of this. It comes from the template.
 - Play journey draws each planned leg in order, with a moving marker. Space starts and pauses. Arrow keys step. Escape closes the tour and returns the map to the view that was active before Play (The trip, or Island, not whatever the last leg zoomed to). Optional ideas are not part of the tour.
 - A click on a place opens a popup with the notes and the explore links. A click on a line opens the leg.
 - Tiles: if `cartoApiKey` is set, or the page was opened with `?cartoKey=YOUR_KEY` (stored in that browser), the basemap is CARTO Voyager and the legend note stays hidden. With no key the map uses Esri World Topo, then Esri World Street if that layer fails. OpenStreetMap is only tried when the page itself is served over http or https. The legend names the basemap in use and mentions how to add a CARTO key. Attribution stays on the map. The legend starts collapsed so it does not cover the route.
-- Export downloads `<trip-slug>-timeline.csv` (UTF-8 with a BOM, so Excel keeps accents). Copy puts the same table on the clipboard as TSV for Google Sheets. Link columns are `=HYPERLINK("url","label")` formulas, and `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so it cannot become a formula. You can write this file yourself beside the HTML. Columns, in order: Date, Day label, Start time, End time, Type (essential, flight, ferry, train, drive, bus, walk, stop, activity, or idea), Title, From, To, Place, Transport mode, Status (booked, planned, or optional), Refs, Notes, Map link, Explore link 1 to n, All links. Essentials are the first rows.
+- Export downloads `<trip-slug>-timeline.csv` (UTF-8 with a BOM, so Excel keeps accents). Copy puts the same table on the clipboard as TSV for Google Sheets. Link columns are `=HYPERLINK("url","label")` formulas, and `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so it cannot become a formula. You can write this file yourself beside the HTML. Columns, in order: Date, Day label, Start time, End time, Type (essential, flight, ferry, train, drive, bus, walk, stop, activity, or idea), Title, From, To, Place, Transport mode, Status (booked, planned, or optional), Refs, Notes, Map link, Explore link 1 to n, All links, Add to Google Calendar, Add to Outlook, Add to Outlook (work). Essentials are the first rows.
+- Calendar downloads one `.ics` (RFC 5545, UTC instants, CRLF, 75-octet folding). The same popup and sidebar card offer Add to calendar (one event), Google, Outlook, and Outlook work. Apple Calendar uses the `.ics` file.
 
 ## Worked example
 
-`examples/example-prompt.md` is a fictional brief. `examples/example-itinerary.md` is the draft after one round of answers. `examples/north-sea-fortnight.html` is the map those answers produced. The people, dates, and booking references in that example are invented.
+`examples/example-prompt.md` is a fictional brief. `examples/example-itinerary.md` is the draft after one round of answers. `examples/north-sea-fortnight.html` is the map, `examples/north-sea-fortnight-timeline.csv` is the spreadsheet, and `examples/north-sea-fortnight.ics` is the calendar file. The people, dates, and booking references in that example are invented.
