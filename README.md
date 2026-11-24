@@ -4,7 +4,7 @@ An agent skill that turns a free-text trip description into a day-by-day itinera
 
 You paste a rough plan. The skill asks one short batch of questions about anything that is still ambiguous, drafts an itinerary for you to confirm, then fills a template. The result is one HTML file you can open in a browser. No build, no account, no server.
 
-Open the example in a browser, with no login: [North Sea fortnight](https://htmlpreview.github.io/?https://github.com/rsordillo/journey-map-skill/blob/main/examples/north-sea-fortnight.html). After this repo has a GitHub Pages site, that is the other no-login option (enable Pages on `main`, then the same file is served from the Pages host).
+The example file is in this repo, so anyone can open it with no login. A source preview is at [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/rsordillo/journey-map-skill/blob/main/examples/north-sea-fortnight.html). That preview does not run the Leaflet script (it only fetches scripts that live on raw.githubusercontent.com), so the tiles do not draw there. Open [`examples/north-sea-fortnight.html`](examples/north-sea-fortnight.html) itself, or enable GitHub Pages on `main`, to see the map. Pages would serve the same file from the Pages host with no login.
 
 ![The example map on a wide screen: essentials, the itinerary, and a curved route from Bergen to Amsterdam](docs/example-desktop.png)
 
