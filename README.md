@@ -1,10 +1,10 @@
-# journey-map-skill
+# Travel Buddy
 
-An agent skill that turns a free-text trip description into a day-by-day itinerary and a single interactive HTML journey map.
+An agent skill that turns your trip description into an interactive journey map and timeline spreadsheet.
 
-You paste a rough plan. The skill asks one short batch of questions about anything that is still ambiguous, drafts an itinerary for you to confirm, then fills a template. The result is one HTML file you can open in a browser. No build, no account, no server.
+You paste a rough plan. The skill asks one short batch of questions about anything that is still ambiguous, drafts an itinerary for you to confirm, then fills a template. The result is one HTML journey map you can open in a browser, and a timeline spreadsheet from Export. No build, no account, no server.
 
-The example file is in this repo, so anyone can open it with no login. A source preview is at [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/rsordillo/journey-map-skill/blob/main/examples/north-sea-fortnight.html). That preview does not run the Leaflet script (it only fetches scripts that live on raw.githubusercontent.com), so the tiles do not draw there. Open [`examples/north-sea-fortnight.html`](examples/north-sea-fortnight.html) itself, or enable GitHub Pages on `main`, to see the map. Pages would serve the same file from the Pages host with no login.
+The example file is in this repo, so anyone can open it with no login. A source preview is at [htmlpreview.github.io](https://htmlpreview.github.io/?https://github.com/rsordillo/travel-buddy/blob/main/examples/north-sea-fortnight.html). That preview does not run the Leaflet script (it only fetches scripts that live on raw.githubusercontent.com), so the tiles do not draw there. Open [`examples/north-sea-fortnight.html`](examples/north-sea-fortnight.html) itself, or enable GitHub Pages on `main`, to see the map. Pages would serve the same file from the Pages host with no login.
 
 ![The example map on a wide screen: essentials, the itinerary, and a curved route from Bergen to Amsterdam](docs/example-desktop.png)
 
@@ -41,7 +41,7 @@ On the map, Space starts and pauses the tour. The arrow keys step through legs. 
 
 The instructions live in [`SKILL.md`](SKILL.md). The blank map lives in [`template/journey-map.html`](template/journey-map.html). Keep those two together: the skill tells the agent to copy the template and replace only the `TRIP` object near the top of the file.
 
-**Claude, and other Anthropic-style skills.** Put this folder where you keep skills, so `SKILL.md` sits next to `template/`. Claude Code reads a skill from `.claude/skills/journey-map/` (or your user skills directory) when the description matches.
+**Claude, and other Anthropic-style skills.** Put this folder where you keep skills, so `SKILL.md` sits next to `template/`. Claude Code reads a skill from `.claude/skills/travel-buddy/` (or your user skills directory) when the description matches.
 
 **Cursor.** Add the folder as a project skill, or point a rule at `SKILL.md`, and leave `template/journey-map.html` in the project so the agent can read it.
 

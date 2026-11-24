@@ -1,9 +1,9 @@
 ---
-name: journey-map
-description: Turns a free-text trip description into a confirmed day-by-day itinerary and one self-contained HTML journey map. Use when someone describes a holiday, route, or multi-stop trip and wants an itinerary, a map, or a file they can open in a browser.
+name: travel-buddy
+description: Turns your trip description into an interactive journey map and a timeline spreadsheet. Use when someone describes a holiday, route, or multi-stop trip and wants an itinerary, a map, or a file they can open in a browser.
 ---
 
-# Journey map
+# Travel Buddy
 
 Turn a trip described in ordinary language into two things the traveller can check:
 
