@@ -1,0 +1,7 @@
+# Reference dumps can contain personal trip data. Never commit them.
+uploads/
+**/gran-canaria*.html
+**/mexico-guatemala*.html
+
+.DS_Store
+*.local

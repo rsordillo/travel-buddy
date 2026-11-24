@@ -1,0 +1,3116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Journey map</title>
+  <meta name="description" content="Interactive journey map." />
+  <meta name="theme-color" content="#0b3b4f" />
+  <!--
+  North Sea fortnight. An example journey map generated from template/journey-map.html.
+  Alex Quinn, Sam Patel, the dates and every booking reference are invented.
+  Trip data is the TRIP object below. The rest of the file is the map engine.
+-->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] },
+        colors: {
+          ocean: { 50: '#eef7f9', 100: '#d5ecf1', 500: '#1b7a8c', 600: '#146272', 700: '#0f4f5d', 900: '#0b3b4f' },
+          sand: { 50: '#fbf7ef', 100: '#f4ead5', 400: '#d9a648', 600: '#a97a22' },
+          lava: { 500: '#d4613f', 600: '#b94d2e' }
+        }
+      } }
+    };
+  </script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!--
+    TRIP DATA
+    Edit this block only. Leave the markup and the map engine alone.
+    Field guide: see the comment above, and SKILL.md.
+  -->
+  <script>
+  var TRIP = {
+  "title": "North Sea fortnight",
+  "subtitle": "Alex Quinn and Sam Patel",
+  "dates": "7 to 20 Jun 2027",
+  "footer": "Times are local. In June, Norway, Denmark and the Netherlands are one hour ahead of the UK.",
+  "doneMessage": "Back in Edinburgh.",
+  "cartoApiKey": "",
+  "countdown": {
+    "start": "2027-06-07T09:10:00+01:00",
+    "end": "2027-06-20T20:00:00+01:00"
+  },
+  "defaultView": "region",
+  "views": [
+    {
+      "id": "region",
+      "label": "The trip"
+    },
+    {
+      "id": "full",
+      "label": "Full route"
+    }
+  ],
+  "modes": [
+    "flight",
+    "ferry",
+    "train",
+    "drive",
+    "idea"
+  ],
+  "modeStyles": {
+    "drive": {
+      "label": "Drives",
+      "name": "Drive"
+    }
+  },
+  "categories": [
+    {
+      "id": "gateway",
+      "label": "Gateways"
+    },
+    {
+      "id": "stay",
+      "label": "Stays"
+    },
+    {
+      "id": "nature",
+      "label": "Nature"
+    },
+    {
+      "id": "sight",
+      "label": "Sights"
+    }
+  ],
+  "highlight": {
+    "title": "Anniversary supper",
+    "when": "Fri 18 Jun, Amsterdam",
+    "stopId": "ams",
+    "note": "A table for two on the Prinsengracht."
+  },
+  "stops": [
+    {
+      "id": "edi",
+      "n": "1",
+      "name": "Edinburgh Airport",
+      "coords": [
+        55.9508,
+        -3.3615
+      ],
+      "status": "travel",
+      "category": "gateway",
+      "gateway": true,
+      "when": "Mon 7 Jun and Sun 20 Jun",
+      "zoom": 9,
+      "lines": [
+        "Out: depart 09:10, land Bergen 12:05.",
+        "Back: depart Schiphol 18:40, land 19:10."
+      ],
+      "note": "Both flights are on one example ticket. Edinburgh is the home gateway, so it stays off The trip view.",
+      "refs": [
+        "NA7K2P"
+      ],
+      "links": [
+        {
+          "label": "Map: Edinburgh Airport",
+          "url": "https://www.google.com/maps/search/?api=1&query=Edinburgh+Airport"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Edinburgh_Airport"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.edinburghairport.com/"
+        }
+      ]
+    },
+    {
+      "id": "bgo",
+      "n": "2",
+      "name": "Bergen",
+      "coords": [
+        60.3973,
+        5.3234
+      ],
+      "status": "base",
+      "category": "stay",
+      "gateway": false,
+      "when": "Mon 7 Jun to Thu 10 Jun",
+      "zoom": 13,
+      "lines": [
+        "Three nights at Vågen House, a flat behind Bryggen.",
+        "Tue 8 Jun is free: Bryggen, the fish market and the Fløibanen."
+      ],
+      "note": "Check-in from 16:00. Booked in this example.",
+      "refs": [
+        "VH-20441"
+      ],
+      "links": [
+        {
+          "label": "Map: Bergen",
+          "url": "https://www.google.com/maps/search/?api=1&query=Bryggen+Bergen"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Bergen"
+        },
+        {
+          "label": "Official site",
+          "url": "https://en.visitbergen.com/"
+        }
+      ]
+    },
+    {
+      "id": "flm",
+      "n": "3",
+      "name": "Flåm",
+      "coords": [
+        60.8631,
+        7.1136
+      ],
+      "status": "planned",
+      "category": "nature",
+      "gateway": false,
+      "when": "Wed 9 Jun",
+      "zoom": 13,
+      "lines": [
+        "Train from Bergen via Myrdal, about two and a half hours.",
+        "One night at the Fjord Room, by the station."
+      ],
+      "note": "The steep Flåm railway is the point of the day.",
+      "refs": [
+        "FR-11830"
+      ],
+      "links": [
+        {
+          "label": "Map: Flåm",
+          "url": "https://www.google.com/maps/search/?api=1&query=Flåm+Norway"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Fl%C3%A5m"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visitflam.com/"
+        }
+      ]
+    },
+    {
+      "id": "hir",
+      "n": "4",
+      "name": "Hirtshals",
+      "coords": [
+        57.5955,
+        9.9635
+      ],
+      "status": "travel",
+      "category": "gateway",
+      "gateway": false,
+      "when": "Fri 11 Jun, morning",
+      "zoom": 12,
+      "lines": [
+        "Overnight ferry from Bergen arrives about 08:00.",
+        "Collect the hire car at the terminal."
+      ],
+      "note": "The cabin is booked in this example. The car is dropped in Aarhus the next afternoon.",
+      "refs": [
+        "NS-88421"
+      ],
+      "links": [
+        {
+          "label": "Map: Hirtshals",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hirtshals+ferry+terminal"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Hirtshals"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visitnordjylland.com/"
+        }
+      ]
+    },
+    {
+      "id": "ska",
+      "n": "5",
+      "name": "Skagen",
+      "coords": [
+        57.725,
+        10.5792
+      ],
+      "status": "planned",
+      "category": "nature",
+      "gateway": false,
+      "when": "Fri 11 Jun, late morning",
+      "zoom": 12,
+      "lines": [
+        "Walk out to where the two seas meet, then lunch, then turn south."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Skagen",
+          "url": "https://www.google.com/maps/search/?api=1&query=Skagen+Denmark"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Skagen"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visitdenmark.com/"
+        }
+      ]
+    },
+    {
+      "id": "aal",
+      "n": "6",
+      "name": "Aalborg",
+      "coords": [
+        57.048,
+        9.919
+      ],
+      "status": "planned",
+      "category": "stay",
+      "gateway": false,
+      "when": "Fri 11 Jun",
+      "zoom": 12,
+      "lines": [
+        "One night on the quayside. A short drive from Skagen."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Aalborg",
+          "url": "https://www.google.com/maps/search/?api=1&query=Aalborg"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Aalborg"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visitaalborg.com/"
+        }
+      ]
+    },
+    {
+      "id": "aar",
+      "n": "7",
+      "name": "Aarhus",
+      "coords": [
+        56.1629,
+        10.2039
+      ],
+      "status": "base",
+      "category": "stay",
+      "gateway": false,
+      "when": "Sat 12 Jun to Tue 15 Jun",
+      "zoom": 13,
+      "lines": [
+        "Three nights at Latiner Rooms.",
+        "Drop the car by the station on Saturday afternoon.",
+        "Sun 13 Jun: ARoS and the old town. Mon 14 Jun is deliberately empty."
+      ],
+      "note": "Booked in this example.",
+      "refs": [
+        "LR-77820"
+      ],
+      "links": [
+        {
+          "label": "Map: Aarhus",
+          "url": "https://www.google.com/maps/search/?api=1&query=Aarhus"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Aarhus"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visitaarhus.com/"
+        }
+      ]
+    },
+    {
+      "id": "cph",
+      "n": "8",
+      "name": "Copenhagen",
+      "coords": [
+        55.6798,
+        12.5908
+      ],
+      "status": "base",
+      "category": "stay",
+      "gateway": false,
+      "when": "Tue 15 Jun to Thu 17 Jun",
+      "zoom": 13,
+      "lines": [
+        "Two nights in a Nyhavn attic flat.",
+        "Wed 16 Jun: Nyhavn and a canal tour. Nothing else is booked."
+      ],
+      "note": "",
+      "refs": [
+        "NH-33107"
+      ],
+      "links": [
+        {
+          "label": "Map: Copenhagen",
+          "url": "https://www.google.com/maps/search/?api=1&query=Nyhavn+Copenhagen"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Copenhagen"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visitcopenhagen.com/"
+        }
+      ]
+    },
+    {
+      "id": "ham",
+      "n": "9",
+      "name": "Hamburg",
+      "coords": [
+        53.5527,
+        10.0068
+      ],
+      "status": "planned",
+      "category": "sight",
+      "gateway": false,
+      "when": "Thu 17 Jun, midday",
+      "zoom": 12,
+      "lines": [
+        "Change trains and eat lunch near the station. Not an overnight."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Hamburg",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hamburg+Hauptbahnhof"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Hamburg"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.hamburg.com/"
+        }
+      ]
+    },
+    {
+      "id": "ams",
+      "n": "10",
+      "name": "Amsterdam",
+      "coords": [
+        52.3731,
+        4.8836
+      ],
+      "status": "base",
+      "category": "stay",
+      "gateway": false,
+      "when": "Thu 17 Jun to Sun 20 Jun",
+      "zoom": 13,
+      "lines": [
+        "Three nights at Canal House on the Prinsengracht.",
+        "Fri 18 Jun: anniversary supper, booked.",
+        "Sat 19 Jun: the Jordaan, slowly."
+      ],
+      "note": "The supper is the one fixed plan in the city.",
+      "refs": [
+        "CH-19044",
+        "TB-44190"
+      ],
+      "links": [
+        {
+          "label": "Map: Amsterdam",
+          "url": "https://www.google.com/maps/search/?api=1&query=Prinsengracht+Amsterdam"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Amsterdam"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.iamsterdam.com/"
+        }
+      ]
+    },
+    {
+      "id": "spl",
+      "n": "11",
+      "name": "Schiphol",
+      "coords": [
+        52.3105,
+        4.7683
+      ],
+      "status": "travel",
+      "category": "gateway",
+      "gateway": false,
+      "when": "Sun 20 Jun, evening",
+      "zoom": 12,
+      "lines": [
+        "Train in from the city, then the 18:40 flight to Edinburgh."
+      ],
+      "note": "",
+      "refs": [
+        "NA7K2P"
+      ],
+      "links": [
+        {
+          "label": "Map: Schiphol",
+          "url": "https://www.google.com/maps/search/?api=1&query=Amsterdam+Airport+Schiphol"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Amsterdam_Airport_Schiphol"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.schiphol.nl/"
+        }
+      ]
+    },
+    {
+      "id": "moe",
+      "n": "A",
+      "name": "Moesgaard",
+      "coords": [
+        56.0877,
+        10.2244
+      ],
+      "status": "idea",
+      "optional": true,
+      "category": "sight",
+      "gateway": false,
+      "when": "Optional, from Aarhus",
+      "zoom": 13,
+      "lines": [
+        "A museum south of the city. Not in the plan."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Moesgaard",
+          "url": "https://www.google.com/maps/search/?api=1&query=Moesgaard+Museum"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Moesgaard_Museum"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.moesgaardmuseum.dk/"
+        }
+      ],
+      "subtitle": "South of Aarhus"
+    },
+    {
+      "id": "lou",
+      "n": "B",
+      "name": "Louisiana",
+      "coords": [
+        55.9693,
+        12.543
+      ],
+      "status": "idea",
+      "optional": true,
+      "category": "sight",
+      "gateway": false,
+      "when": "Optional, from Copenhagen",
+      "zoom": 13,
+      "lines": [
+        "Art museum up the coast. Not in the plan."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Louisiana",
+          "url": "https://www.google.com/maps/search/?api=1&query=Louisiana+Museum+Humlebæk"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Louisiana_Museum_of_Modern_Art"
+        },
+        {
+          "label": "Official site",
+          "url": "https://louisiana.dk/"
+        }
+      ],
+      "subtitle": "Up the coast from Copenhagen"
+    },
+    {
+      "id": "haa",
+      "n": "C",
+      "name": "Haarlem",
+      "coords": [
+        52.3874,
+        4.6462
+      ],
+      "status": "idea",
+      "optional": true,
+      "category": "sight",
+      "gateway": false,
+      "when": "Optional, from Amsterdam",
+      "zoom": 13,
+      "lines": [
+        "A short train west, if Saturday feels too still."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Haarlem",
+          "url": "https://www.google.com/maps/search/?api=1&query=Haarlem"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Haarlem"
+        },
+        {
+          "label": "Official site",
+          "url": "https://www.visithaarlem.com/"
+        }
+      ],
+      "subtitle": "West of Amsterdam"
+    },
+    {
+      "id": "skd",
+      "n": "D",
+      "name": "Skanderborg",
+      "coords": [
+        56.0397,
+        9.9272
+      ],
+      "status": "idea",
+      "optional": true,
+      "category": "sight",
+      "gateway": false,
+      "when": "Optional, from Aarhus",
+      "zoom": 12,
+      "subtitle": "On the way to Moesgaard",
+      "lines": [
+        "A pause on the optional loop south of Aarhus. Not in the plan."
+      ],
+      "note": "",
+      "refs": [],
+      "links": [
+        {
+          "label": "Map: Skanderborg",
+          "url": "https://www.google.com/maps/search/?api=1&query=Skanderborg"
+        },
+        {
+          "label": "Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Skanderborg"
+        }
+      ]
+    }
+  ],
+  "legs": [
+    {
+      "id": "f1",
+      "mode": "flight",
+      "day": "d1",
+      "optional": false,
+      "title": "Edinburgh to Bergen",
+      "when": "Mon 7 Jun, 09:10 to 12:05",
+      "detail": "Direct flight, about two hours in the air.",
+      "segments": [
+        {
+          "from": "edi",
+          "to": "bgo",
+          "c": 0.18
+        }
+      ],
+      "refs": [
+        "NA7K2P"
+      ],
+      "start": "09:10",
+      "end": "12:05",
+      "status": "booked"
+    },
+    {
+      "id": "t1",
+      "mode": "train",
+      "day": "d3",
+      "optional": false,
+      "title": "Bergen to Flåm",
+      "when": "Wed 9 Jun, morning",
+      "detail": "Bergen to Myrdal, then the Flåm railway down to the fjord.",
+      "segments": [
+        {
+          "from": "bgo",
+          "to": "flm",
+          "c": 0.34
+        }
+      ]
+    },
+    {
+      "id": "t2",
+      "mode": "train",
+      "day": "d4",
+      "optional": false,
+      "title": "Flåm to Bergen",
+      "when": "Thu 10 Jun, morning",
+      "detail": "Back up the valley in time for the evening ferry.",
+      "segments": [
+        {
+          "from": "flm",
+          "to": "bgo",
+          "c": -0.34
+        }
+      ]
+    },
+    {
+      "id": "fy1",
+      "mode": "ferry",
+      "day": "d4",
+      "optional": false,
+      "title": "Bergen to Hirtshals",
+      "when": "Thu 10 Jun, 20:30 to Fri 08:00",
+      "detail": "Overnight ferry, cabin for two.",
+      "segments": [
+        {
+          "from": "bgo",
+          "to": "hir",
+          "c": 0.16
+        }
+      ],
+      "links": [
+        {
+          "label": "Map: Hirtshals",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hirtshals+ferry+terminal"
+        },
+        {
+          "label": "Port info",
+          "url": "https://www.visitnordjylland.com/"
+        }
+      ],
+      "refs": [
+        "NS-88421"
+      ],
+      "start": "20:30",
+      "end": "08:00",
+      "status": "booked"
+    },
+    {
+      "id": "r1",
+      "mode": "drive",
+      "day": "d5",
+      "optional": false,
+      "title": "Hirtshals to Skagen",
+      "when": "Fri 11 Jun, morning",
+      "detail": "About 40 minutes north once the car is collected.",
+      "segments": [
+        {
+          "from": "hir",
+          "to": "ska",
+          "c": 0.38
+        }
+      ],
+      "refs": [
+        "KB-55210"
+      ],
+      "status": "booked"
+    },
+    {
+      "id": "r2",
+      "mode": "drive",
+      "day": "d5",
+      "optional": false,
+      "title": "Skagen to Aalborg",
+      "when": "Fri 11 Jun, afternoon",
+      "detail": "About an hour and a quarter south, after lunch.",
+      "segments": [
+        {
+          "from": "ska",
+          "to": "aal",
+          "c": -0.26
+        }
+      ]
+    },
+    {
+      "id": "r3",
+      "mode": "drive",
+      "day": "d6",
+      "optional": false,
+      "title": "Aalborg to Aarhus",
+      "when": "Sat 12 Jun",
+      "detail": "About an hour and a quarter. Drop the car at Aarhus station by mid-afternoon.",
+      "segments": [
+        {
+          "from": "aal",
+          "to": "aar",
+          "c": 0.22
+        }
+      ]
+    },
+    {
+      "id": "t3",
+      "mode": "train",
+      "day": "d9",
+      "optional": false,
+      "title": "Aarhus to Copenhagen",
+      "when": "Tue 15 Jun",
+      "detail": "About three hours, no changes worth planning around.",
+      "segments": [
+        {
+          "from": "aar",
+          "to": "cph",
+          "c": 0.2
+        }
+      ]
+    },
+    {
+      "id": "t4",
+      "mode": "train",
+      "day": "d11",
+      "optional": false,
+      "title": "Copenhagen to Amsterdam",
+      "when": "Thu 17 Jun, all day",
+      "detail": "Leave about 07:30, change at Hamburg for lunch, Amsterdam by early evening. The long travel day of the trip, on purpose.",
+      "segments": [
+        {
+          "from": "cph",
+          "to": "ham",
+          "c": 0.18
+        },
+        {
+          "from": "ham",
+          "to": "ams",
+          "c": -0.2
+        }
+      ]
+    },
+    {
+      "id": "t5",
+      "mode": "train",
+      "day": "d14",
+      "optional": false,
+      "title": "Amsterdam to Schiphol",
+      "when": "Sun 20 Jun, late afternoon",
+      "detail": "A short train to the airport for the 18:40 departure.",
+      "segments": [
+        {
+          "from": "ams",
+          "to": "spl",
+          "c": 0.42
+        }
+      ]
+    },
+    {
+      "id": "f2",
+      "mode": "flight",
+      "day": "d14",
+      "optional": false,
+      "title": "Amsterdam to Edinburgh",
+      "when": "Sun 20 Jun, 18:40 to 19:10",
+      "detail": "Direct flight. The clock goes back an hour on landing.",
+      "segments": [
+        {
+          "from": "spl",
+          "to": "edi",
+          "c": 0.2
+        }
+      ],
+      "refs": [
+        "NA7K2P"
+      ],
+      "start": "18:40",
+      "end": "19:10",
+      "status": "booked"
+    },
+    {
+      "id": "i1",
+      "mode": "drive",
+      "day": null,
+      "optional": true,
+      "title": "Aarhus loop via Skanderborg",
+      "when": "Optional",
+      "detail": "Optional loop south of the city. The faint line is the ride back to Aarhus, not a reverse of each hop.",
+      "segments": [
+        {
+          "from": "aar",
+          "to": "skd",
+          "c": 0.28
+        },
+        {
+          "from": "skd",
+          "to": "moe",
+          "c": 0.22
+        }
+      ],
+      "subtitle": "South of Aarhus",
+      "returnTo": "aar"
+    },
+    {
+      "id": "i2",
+      "mode": "train",
+      "day": null,
+      "optional": true,
+      "title": "Copenhagen to Louisiana",
+      "when": "Optional",
+      "detail": "About 45 minutes up the coast. Not in the plan.",
+      "segments": [
+        {
+          "from": "cph",
+          "to": "lou",
+          "c": -0.35
+        }
+      ],
+      "subtitle": "Up the coast from Copenhagen",
+      "returnTo": "cph"
+    },
+    {
+      "id": "i3",
+      "mode": "train",
+      "day": null,
+      "optional": true,
+      "title": "Amsterdam to Haarlem",
+      "when": "Optional",
+      "detail": "About 15 minutes. Not in the plan.",
+      "segments": [
+        {
+          "from": "ams",
+          "to": "haa",
+          "c": 0.4
+        }
+      ],
+      "subtitle": "West of Amsterdam",
+      "returnTo": "ams"
+    }
+  ],
+  "days": [
+    {
+      "id": "d1",
+      "date": "Mon 7 Jun",
+      "title": "Fly to Bergen",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "f1"
+        },
+        {
+          "type": "stop",
+          "id": "bgo"
+        }
+      ]
+    },
+    {
+      "id": "d2",
+      "date": "Tue 8 Jun",
+      "title": "Bergen, unhurried",
+      "entries": [
+        {
+          "type": "note",
+          "title": "Bryggen and the Fløibanen",
+          "text": "No transfer. Fish market, wharf and the funicular.",
+          "stopId": "bgo"
+        }
+      ]
+    },
+    {
+      "id": "d3",
+      "date": "Wed 9 Jun",
+      "title": "Train to Flåm",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "t1"
+        },
+        {
+          "type": "stop",
+          "id": "flm"
+        }
+      ]
+    },
+    {
+      "id": "d4",
+      "date": "Thu 10 Jun",
+      "title": "Back, then the ferry",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "t2"
+        },
+        {
+          "type": "leg",
+          "id": "fy1"
+        }
+      ]
+    },
+    {
+      "id": "d5",
+      "date": "Fri 11 Jun",
+      "title": "Skagen and Aalborg",
+      "entries": [
+        {
+          "type": "stop",
+          "id": "hir"
+        },
+        {
+          "type": "leg",
+          "id": "r1"
+        },
+        {
+          "type": "stop",
+          "id": "ska"
+        },
+        {
+          "type": "leg",
+          "id": "r2"
+        },
+        {
+          "type": "stop",
+          "id": "aal"
+        }
+      ]
+    },
+    {
+      "id": "d6",
+      "date": "Sat 12 Jun",
+      "title": "Drive to Aarhus",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "r3"
+        },
+        {
+          "type": "stop",
+          "id": "aar"
+        },
+        {
+          "type": "note",
+          "title": "Drop the car",
+          "text": "Back at Aarhus station by mid-afternoon. The rest of the stay is on foot.",
+          "stopId": "aar"
+        }
+      ]
+    },
+    {
+      "id": "d7",
+      "date": "Sun 13 Jun",
+      "title": "Aarhus",
+      "entries": [
+        {
+          "type": "note",
+          "title": "ARoS and the old town",
+          "text": "One museum, then the lanes. Moesgaard stays optional.",
+          "stopId": "aar"
+        },
+        {
+          "type": "leg",
+          "id": "i1"
+        }
+      ],
+      "returnTo": "aar"
+    },
+    {
+      "id": "d8",
+      "date": "Mon 14 Jun",
+      "title": "Easy day",
+      "entries": [
+        {
+          "type": "note",
+          "title": "Nothing planned",
+          "text": "Latin Quarter, coffee, an early night.",
+          "stopId": "aar"
+        }
+      ]
+    },
+    {
+      "id": "d9",
+      "date": "Tue 15 Jun",
+      "title": "Train to Copenhagen",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "t3"
+        },
+        {
+          "type": "stop",
+          "id": "cph"
+        }
+      ]
+    },
+    {
+      "id": "d10",
+      "date": "Wed 16 Jun",
+      "title": "Copenhagen",
+      "entries": [
+        {
+          "type": "note",
+          "title": "Nyhavn and a canal tour",
+          "text": "Louisiana stays optional, up the coast.",
+          "stopId": "cph"
+        }
+      ]
+    },
+    {
+      "id": "d11",
+      "date": "Thu 17 Jun",
+      "title": "South by train",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "t4"
+        },
+        {
+          "type": "stop",
+          "id": "ham"
+        },
+        {
+          "type": "stop",
+          "id": "ams"
+        }
+      ]
+    },
+    {
+      "id": "d12",
+      "date": "Fri 18 Jun",
+      "title": "Amsterdam",
+      "entries": [
+        {
+          "type": "note",
+          "title": "Canals, then supper",
+          "text": "The anniversary table is the only booking in the city.",
+          "stopId": "ams"
+        }
+      ]
+    },
+    {
+      "id": "d13",
+      "date": "Sat 19 Jun",
+      "title": "The Jordaan",
+      "entries": [
+        {
+          "type": "note",
+          "title": "Stay in the neighbourhood",
+          "text": "Haarlem is there if the day feels too still.",
+          "stopId": "ams"
+        }
+      ]
+    },
+    {
+      "id": "d14",
+      "date": "Sun 20 Jun",
+      "title": "Fly home",
+      "entries": [
+        {
+          "type": "leg",
+          "id": "t5"
+        },
+        {
+          "type": "leg",
+          "id": "f2"
+        }
+      ]
+    }
+  ],
+  "returnArcs": "faint",
+  "essentials": [
+    {
+      "id": "ess-stay",
+      "title": "Vågen House, Bergen",
+      "text": "Mon 7 to Thu 10 Jun, a flat behind Bryggen",
+      "refs": [
+        "VH-20441"
+      ],
+      "stopId": "bgo",
+      "links": [
+        {
+          "label": "Map: Bergen",
+          "url": "https://www.google.com/maps/search/?api=1&query=Bryggen+Bergen"
+        },
+        {
+          "label": "Visit Bergen",
+          "url": "https://en.visitbergen.com/"
+        }
+      ]
+    },
+    {
+      "id": "ess-ferry",
+      "title": "Overnight ferry",
+      "text": "Bergen to Hirtshals, cabin for two",
+      "refs": [
+        "NS-88421"
+      ],
+      "stopId": "hir",
+      "links": [
+        {
+          "label": "Map: Hirtshals",
+          "url": "https://www.google.com/maps/search/?api=1&query=Hirtshals+ferry+terminal"
+        }
+      ]
+    },
+    {
+      "id": "ess-car",
+      "title": "Hire car",
+      "text": "Collected at Hirtshals, dropped in Aarhus",
+      "refs": [
+        "KB-55210"
+      ],
+      "stopId": "aar",
+      "links": [
+        {
+          "label": "Map: Aarhus",
+          "url": "https://www.google.com/maps/search/?api=1&query=Aarhus"
+        }
+      ]
+    },
+    {
+      "id": "ess-flights",
+      "title": "Flights",
+      "text": "Edinburgh out, Schiphol home",
+      "refs": [
+        "NA7K2P"
+      ],
+      "stopId": "edi",
+      "links": [
+        {
+          "label": "Edinburgh Airport",
+          "url": "https://www.edinburghairport.com/"
+        }
+      ]
+    }
+  ]
+};
+  </script>
+
+  <style>
+    :root { --sidebar-w: 360px; --sheet-peek: 168px; --sheet-offset: 0px; }
+    html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+    #map { position: absolute; inset: 0; z-index: 1; background: #dfeef2; }
+
+    #sidebar {
+      width: var(--sidebar-w);
+      max-width: 92vw;
+      transition: transform .28s ease, margin-left .28s ease;
+    }
+    .sheet-handle { display: none; width: 100%; padding: 8px 0 4px; border: 0; background: transparent; cursor: grab; touch-action: none; }
+    .sheet-handle span { display: block; width: 40px; height: 4px; margin: 0 auto; border-radius: 999px; background: rgba(15, 79, 93, .22); }
+
+    @media (max-width: 767px) {
+      #sidebar {
+        position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%; max-width: none; height: min(78vh, 720px);
+        z-index: 1200; border-radius: 18px 18px 0 0; border-right: 0;
+        border-top: 1px solid rgba(11, 59, 79, .08);
+        box-shadow: 0 -12px 32px rgba(11, 59, 79, .16);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      #sidebar.is-open { transform: translateY(0); }
+      #sidebar.is-peek { transform: translateY(calc(100% - var(--sheet-peek))); }
+      #sidebar.is-collapsed { transform: translateY(110%); }
+      #sidebar header { padding-top: 0; }
+      .sheet-handle { display: block; }
+      #backdrop { transition: opacity .28s ease; }
+      #legend, #tour-bar { bottom: calc(var(--sheet-offset) + 12px); }
+      .leaflet-bottom.leaflet-right { margin-bottom: calc(var(--sheet-offset) + 8px) !important; }
+    }
+    @media (min-width: 768px) {
+      #sidebar { position: relative; flex-shrink: 0; height: 100%; transform: none; }
+      #sidebar.is-collapsed { margin-left: calc(-1 * var(--sidebar-w)); }
+      #backdrop { display: none !important; }
+    }
+
+    .thin-scroll { overscroll-behavior: contain; }
+    .thin-scroll::-webkit-scrollbar { width: 5px; }
+    .thin-scroll::-webkit-scrollbar-thumb { background: rgba(15, 79, 93, .18); border-radius: 9999px; }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px; padding: 0; overflow: hidden;
+      box-shadow: 0 12px 32px -12px rgba(11, 59, 79, .35);
+      border: 1px solid rgba(11, 59, 79, .08);
+    }
+    .leaflet-popup-content { margin: 0; line-height: 1.45; max-width: calc(100vw - 64px); }
+    .leaflet-container a.leaflet-popup-close-button {
+      top: 6px; right: 6px; width: 24px; height: 24px; line-height: 22px;
+      border-radius: 9999px; color: #64748b; font-size: 17px; text-align: center;
+    }
+    .leaflet-container a.leaflet-popup-close-button:hover { background: #f1f5f9; color: #0f172a; }
+    .leaflet-container { font-family: 'Inter', system-ui, sans-serif; }
+    .leaflet-tooltip.stop-tip {
+      border-radius: 6px; padding: 2px 7px; font-weight: 500; font-size: 11px; color: #0b3b4f;
+      border: 0; box-shadow: 0 2px 8px rgba(11, 59, 79, .18);
+    }
+
+    .wp { position: relative; width: 26px; height: 26px; }
+    .wp-dot {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      border-radius: 9999px; background: #fff; font-weight: 600; font-size: 11px;
+      border: 2.5px solid currentColor; box-shadow: 0 2px 6px rgba(11, 59, 79, .25);
+      transition: transform .18s ease;
+    }
+    .wp-dot.is-filled { color: #fff !important; }
+    .wp-dot.is-idea { border-style: dashed; }
+    .leaflet-marker-icon:hover .wp-dot, .wp.is-active .wp-dot { transform: scale(1.18); }
+    .wp-ring {
+      position: absolute; inset: -4px; border-radius: 9999px; border: 2px solid currentColor;
+      pointer-events: none; animation: ring 1.8s ease-out infinite;
+    }
+    .wp-heart {
+      position: absolute; top: -6px; right: -7px; width: 16px; height: 16px; border-radius: 9999px;
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(11, 59, 79, .25);
+    }
+    @keyframes ring { 0% { transform: scale(.9); opacity: .7; } 80%, 100% { transform: scale(1.6); opacity: 0; } }
+
+    .arrow-icon, .vehicle-icon { pointer-events: none; }
+    .arrow-icon > div, .vehicle-icon > div {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    }
+    .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+      margin-bottom: 10px; margin-right: 10px; border: 0; box-shadow: 0 2px 8px rgba(11, 59, 79, .18);
+    }
+    .leaflet-control-zoom a { color: #0b3b4f; }
+    .leaflet-control-scale { border: 0; }
+
+    .tl-item.is-active { background: #eef7f9; box-shadow: inset 2px 0 0 #146272; }
+    .tl-item.is-filtered, .tl-day.is-empty { display: none; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+      border-radius: 9999px; font-size: 11px; font-weight: 500; line-height: 1.2;
+      border: 1px solid #d5ecf1; background: #eef7f9; color: #0b3b4f; cursor: pointer;
+    }
+    .chip[aria-pressed="false"] { background: #fff; border-color: #e2e8f0; color: #94a3b8; }
+    .view-btn {
+      height: 30px; padding: 0 12px; border: 0; border-radius: 10px; cursor: pointer;
+      font-size: 12px; font-weight: 500; color: #64748b; background: transparent;
+    }
+    .view-btn[aria-pressed="true"] { background: #0b3b4f; color: #fff; }
+    .filter-select {
+      flex: 1; min-width: 0; height: 28px; border-radius: 9999px;       border: 1px solid #e2e8f0;
+      background: #fff; color: #0f4f5d; font-size: 11px; font-weight: 500; padding: 0 8px;
+      color-scheme: light;
+    }
+    .reset-btn {
+      flex-shrink: 0; border: 0; background: transparent; color: #146272;
+      font-size: 11px; font-weight: 600; padding: 4px; cursor: pointer;
+    }
+    .hi-btn {
+      display: flex; width: 100%; text-align: left; align-items: center; gap: 8px;
+      margin-top: 10px; padding: 7px 10px; border-radius: 12px; cursor: pointer;
+      background: #fbf7ef; border: 1px solid #f4ead5; color: #0b3b4f;
+    }
+    .tb-btn {
+      padding: 6px; border: 0; border-radius: 8px; background: transparent; color: #64748b; cursor: pointer;
+    }
+    .tb-btn:hover { background: #eef7f9; color: #0b3b4f; }
+    .tb-btn:disabled { opacity: .35; cursor: default; }
+    .tb-btn:disabled:hover { background: transparent; color: #64748b; }
+    button:focus-visible, a:focus-visible, select:focus-visible {
+      outline: 2px solid #146272; outline-offset: 2px;
+    }
+    .ref-chip {
+      display: inline-flex; align-items: center; margin: 3px 4px 0 0; padding: 1px 6px;
+      border-radius: 999px; background: #f4ead5; color: #8a4e1d; font-size: 10px; font-weight: 600;
+    }
+    .export-btn {
+      height: 30px; padding: 0 10px; border: 0; border-radius: 10px; cursor: pointer;
+      background: transparent; color: #0f4f5d; font-size: 12px; font-weight: 600;
+    }
+    .export-btn:hover { background: #eef7f9; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+    @media (max-width: 767px) { .leaflet-control-attribution { font-size: 9px; line-height: 1.3; max-width: 62vw; } }
+  </style>
+</head>
+<body class="bg-ocean-50 text-slate-700 antialiased">
+<div class="relative w-full h-full flex overflow-hidden">
+  <div id="backdrop" class="fixed inset-0 bg-ocean-900/30 z-[1100] opacity-0 pointer-events-none"></div>
+
+  <aside id="sidebar" class="h-full bg-white border-r border-ocean-900/10 flex flex-col shadow-xl md:shadow-none is-peek" aria-label="Itinerary">
+    <header class="px-5 pb-3 shrink-0 border-b border-ocean-900/5">
+      <button id="sheet-handle" type="button" class="sheet-handle" aria-expanded="false" aria-controls="itinerary-list" aria-label="Expand itinerary">
+        <span></span>
+      </button>
+      <div class="flex items-start justify-between gap-3 pt-1">
+        <div class="min-w-0">
+          <h1 id="trip-title" class="text-lg font-semibold tracking-tight text-ocean-900 leading-tight">Journey</h1>
+          <p id="trip-sub" class="text-[13px] text-slate-500 mt-0.5"></p>
+          <p id="countdown" class="text-[11px] text-ocean-600 mt-1"></p>
+          <p id="stats-line" class="text-[11px] text-slate-400 mt-1"></p>
+        </div>
+        <button id="btn-close-sidebar" type="button" title="Hide itinerary" aria-label="Hide itinerary"
+                class="p-1.5 -mr-1.5 rounded-lg text-slate-400 hover:text-ocean-900 hover:bg-ocean-50">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+      </div>
+      <button id="highlight-btn" type="button" class="hi-btn hidden"></button>
+      <div id="filter-modes" class="flex flex-wrap gap-1.5 mt-3" role="group" aria-label="Filter by transport"></div>
+      <div class="flex items-center gap-1.5 mt-2">
+        <select id="filter-day" class="filter-select" aria-label="Filter by day"></select>
+        <select id="filter-category" class="filter-select" aria-label="Filter by category"></select>
+        <button id="btn-reset-filters" type="button" class="reset-btn">Show all</button>
+      </div>
+    </header>
+
+    <div id="itinerary-list" class="flex-1 overflow-y-auto thin-scroll px-3 pb-4"></div>
+
+    <footer class="px-5 py-2.5 border-t border-ocean-900/5 text-[11px] text-slate-400 flex items-center justify-between gap-3 shrink-0">
+      <span id="trip-footer"></span>
+      <span class="hidden sm:inline shrink-0 text-slate-300">Space plays</span>
+    </footer>
+  </aside>
+
+  <main class="relative flex-1 h-full min-w-0">
+    <div id="map" role="application" aria-label="Journey map"></div>
+
+    <button id="btn-open-sidebar" type="button" aria-label="Show itinerary"
+            class="hidden absolute top-3 left-3 z-[900] items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur shadow-md text-ocean-900 text-xs font-medium hover:bg-white">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
+      Itinerary
+    </button>
+
+    <div class="absolute top-3 right-3 z-[850] flex flex-wrap items-center justify-end gap-2 max-w-[calc(100%-4.5rem)]">
+      <div class="inline-flex bg-white/95 backdrop-blur p-0.5 rounded-xl shadow-md" role="group" aria-label="Spreadsheet export">
+        <button id="btn-export" type="button" class="export-btn">Export</button>
+        <button id="btn-copy-sheets" type="button" class="export-btn" title="Copy for Google Sheets">Copy</button>
+      </div>
+      <div id="view-switcher" class="inline-flex bg-white/95 backdrop-blur p-0.5 rounded-xl shadow-md" role="group" aria-label="Map view"></div>
+      <button id="btn-play-tour" type="button" aria-label="Play journey"
+              class="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-xl bg-ocean-900 hover:bg-ocean-700 text-white text-xs font-medium shadow-md">
+        <svg id="icon-play" class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="icon-pause" class="w-3 h-3 hidden" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        <span id="label-play-tour" class="hidden sm:inline">Play journey</span>
+      </button>
+    </div>
+
+    <div id="legend" class="absolute bottom-3 left-3 z-[800] bg-white/90 backdrop-blur rounded-xl shadow-md text-[11px] text-slate-600 max-w-[220px]">
+      <button id="btn-legend" type="button" aria-expanded="false" class="w-full flex items-center justify-between gap-3 px-3 py-2 font-semibold text-[11px] uppercase tracking-wide text-ocean-900">
+        <span>Legend</span>
+        <svg id="legend-chevron" class="w-3.5 h-3.5 transition-transform" style="transform:rotate(-90deg)" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div id="legend-body" class="hidden px-3 pb-2.5 space-y-1"></div>
+    </div>
+
+    <div id="tour-bar" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-[950] w-[calc(100%-1.5rem)] max-w-sm bg-white/95 backdrop-blur rounded-xl shadow-lg overflow-hidden" role="region" aria-label="Journey tour" aria-live="polite">
+      <div class="flex items-center gap-1 pl-3 pr-1.5 py-2">
+        <div class="min-w-0 flex-1">
+          <div id="tour-meta" class="text-[10px] font-medium uppercase tracking-wide text-ocean-600"></div>
+          <div id="tour-title" class="text-[13px] font-semibold text-ocean-900 truncate"></div>
+        </div>
+        <button id="btn-tour-prev" type="button" aria-label="Previous" class="tb-btn"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+        <button id="btn-tour-toggle" type="button" aria-label="Play or pause" class="tb-btn text-ocean-900">
+          <svg id="tb-play" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="tb-pause" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        <button id="btn-tour-next" type="button" aria-label="Next" class="tb-btn"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></button>
+        <button id="btn-tour-stop" type="button" aria-label="Close tour" class="tb-btn"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div id="tour-dots" class="flex gap-1 px-3 pb-1.5"></div>
+      <div class="h-0.5 bg-ocean-100"><div id="tour-progress" class="h-full bg-ocean-500 transition-all duration-300" style="width:0"></div></div>
+    </div>
+
+    <div id="toast" class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-[1000] px-3 py-1.5 rounded-lg bg-ocean-900 text-white text-xs shadow-md"></div>
+  </main>
+</div>
+<script>
+/*
+ * Journey map engine.
+ * Leaflet 1.9.4. Curves are quadratic Beziers in EPSG:3857 metres, so a leg
+ * and its arrowheads match the Mercator tiles at every zoom.
+ * Do not edit this script to change a trip. Edit the TRIP object above.
+ */
+(function () {
+  'use strict';
+
+  var TRIP = window.TRIP;
+  if (!TRIP || !Array.isArray(TRIP.stops) || !TRIP.stops.length) {
+    console.error('Journey map: the TRIP object is missing stops.');
+    return;
+  }
+
+  var PLANE = 'M21 16v-2l-8-5V3.5a1.5 1.5 0 00-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z';
+  var HEART = 'M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.4h2c.8-1.2 2.3-2.4 4.4-2.4 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z';
+  var ICONS = {
+    plane: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + PLANE + '"/></svg>',
+    ferry: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15l2-6h14l2 6M4 15c1.4 1.6 2.5 2.2 4 2.2S10.6 16.4 12 15c1.4 1.4 2.5 2.2 4 2.2s2.6-.6 4-2.2M12 4v5"/></svg>',
+    train: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4h10a2 2 0 012 2v8a3 3 0 01-3 3H8a3 3 0 01-3-3V6a2 2 0 012-2zM8 17l-2 3m10-3l2 3M8 9h8"/></svg>',
+    car: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l1.6-4.5h10.8L19 13M5 13h14v4H5zM7.5 17.5v1M16.5 17.5v1"/></svg>',
+    bus: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4h12a1 1 0 011 1v11H5V5a1 1 0 011-1zM5 10h14M7 19v1M17 19v1"/></svg>',
+    walk: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5a2 2 0 11-4 0 2 2 0 014 0zM9 22l2-7 2 2 2 5M10 10l-2 4h4l3 3"/></svg>',
+    idea: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2M19 12h2M17 7l1.4-1.4M9 18h6M10 21h4M12 7a5 5 0 00-3 9h6a5 5 0 00-3-9z"/></svg>',
+    stay: '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6M3 18h18M7 10V7h4v3"/></svg>'
+  };
+
+  /* Built-in transport styles. TRIP.modeStyles can override or add a mode. */
+  var MODE_DEFAULTS = {
+    flight: { label: 'Flights', name: 'Flight', color: '#0f4f5d', hi: '#0b3b4f', dash: '7 6', weight: 2.2, icon: 'plane' },
+    ferry:  { label: 'Ferry', name: 'Ferry', color: '#0e7490', hi: '#155e75', dash: '9 5', weight: 3, icon: 'ferry' },
+    train:  { label: 'Train', name: 'Train', color: '#1d4e89', hi: '#163a66', dash: null, weight: 3.2, icon: 'train' },
+    drive:  { label: 'Road', name: 'Drive', color: '#b86a2a', hi: '#8a4e1d', dash: null, weight: 3.4, icon: 'car' },
+    bus:    { label: 'Bus', name: 'Bus', color: '#3d6b7a', hi: '#0f4f5d', dash: '4 4', weight: 2.8, icon: 'bus' },
+    walk:   { label: 'Walk', name: 'Walk', color: '#3f7d5a', hi: '#24543a', dash: '2 5', weight: 2.4, icon: 'walk' },
+    idea:   { label: 'Optional', name: 'Optional', color: '#d9a648', hi: '#a97a22', dash: '0.5 6', weight: 2.4, icon: 'idea' }
+  };
+  var STATUS = {
+    booked:  { label: 'Booked', color: '#d4613f', filled: true },
+    base:    { label: 'Booked stay', color: '#d4613f', filled: true },
+    travel:  { label: 'Travel', color: '#475569', filled: false },
+    planned: { label: 'Planned', color: '#1b7a8c', filled: false },
+    idea:    { label: 'Optional idea', color: '#d9a648', filled: false, dashed: true }
+  };
+
+  function el(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function safeUrl(url) {
+    try {
+      var u = new URL(url, window.location.href);
+      if (u.protocol === 'https:' || u.protocol === 'http:') return u.href;
+    } catch (e) { /* ignore bad urls */ }
+    return '';
+  }
+  function refList(value) {
+    if (!value) return [];
+    var raw = Array.isArray(value) ? value : String(value).split(/\s*;\s*|\n/);
+    return raw.map(function (r) { return String(r).trim(); }).filter(Boolean);
+  }
+  function refChips(value) {
+    var refs = refList(value);
+    if (!refs.length) return '';
+    return '<span class="mt-1 flex flex-wrap">' + refs.map(function (r) {
+      return '<span class="ref-chip">' + esc(r) + '</span>';
+    }).join('') + '</span>';
+  }
+  function returnArcsOn() {
+    var setting = TRIP.returnArcs;
+    return !(setting === false || setting === 'off' || setting === 'none');
+  }
+  function legReturnTarget(leg) {
+    if (!returnArcsOn() || !leg) return null;
+    if (leg.returnTo && stopById[leg.returnTo]) return leg.returnTo;
+    if (leg.returns) {
+      var segs = segmentsOf(leg);
+      return segs.length ? segs[0].from : null;
+    }
+    return null;
+  }
+  /* One faint arc back to a base. A white casing keeps it readable on the topo tiles. */
+  function addReturnArc(group, fromId, toId, look, bendHint) {
+    if (!stopById[fromId] || !stopById[toId] || fromId === toId) return null;
+    var bend = typeof bendHint === 'number' ? bendHint : 0.22;
+    if (bend === 0) bend = 0.22;
+    var bz = makeBezier(stopById[fromId].coords, stopById[toId].coords, -Math.abs(bend));
+    var halo = L.polyline(bz.latLngs, {
+      pane: 'legHalo', color: '#ffffff', weight: 8, opacity: 0.95, interactive: false, lineCap: 'round'
+    }).addTo(group);
+    var line = L.polyline(bz.latLngs, {
+      pane: 'legs', color: look.color, weight: Math.max(2.6, (look.weight || 3) - 0.3),
+      opacity: 0.9, interactive: false, lineCap: 'round', lineJoin: 'round', dashArray: '2 6'
+    }).addTo(group);
+    return { halo: halo, line: line, latLngs: bz.latLngs };
+  }
+
+  var stopById = {};
+  TRIP.stops.forEach(function (s) { stopById[s.id] = s; });
+  var legById = {};
+  (TRIP.legs || []).forEach(function (l) { legById[l.id] = l; });
+  var dayById = {};
+  (TRIP.days || []).forEach(function (d) { dayById[d.id] = d; });
+
+  var views = (TRIP.views && TRIP.views.length) ? TRIP.views : [
+    { id: 'region', label: 'The trip' },
+    { id: 'full', label: 'Full route' }
+  ];
+
+  function modeStyle(id) {
+    var base = MODE_DEFAULTS[id] || { label: id, name: id, color: '#1b7a8c', hi: '#0f4f5d', dash: null, weight: 3, icon: 'car' };
+    var extra = (TRIP.modeStyles && TRIP.modeStyles[id]) || {};
+    var out = {};
+    Object.keys(base).forEach(function (k) { out[k] = base[k]; });
+    Object.keys(extra).forEach(function (k) {
+      if (extra[k] != null && extra[k] !== '') out[k] = extra[k];
+    });
+    if (!ICONS[out.icon]) out.icon = 'car';
+    if (!out.name) out.name = out.label;
+    return out;
+  }
+  function isOptional(leg) { return !!(leg && (leg.optional || leg.mode === 'idea')); }
+  function appearance(leg) { return modeStyle(isOptional(leg) ? 'idea' : leg.mode); }
+  function statusInfo(s) { return STATUS[s.status] || STATUS.planned; }
+  function isIdeaStop(s) { return !!(s && (s.status === 'idea' || s.optional)); }
+
+  function modeIds() {
+    if (TRIP.modes && TRIP.modes.length) return TRIP.modes.slice();
+    var ids = [];
+    (TRIP.legs || []).forEach(function (leg) {
+      var id = isOptional(leg) ? 'idea' : leg.mode;
+      if (ids.indexOf(id) === -1) ids.push(id);
+    });
+    return ids.length ? ids : ['flight'];
+  }
+  function categoryList() {
+    if (TRIP.categories && TRIP.categories.length) return TRIP.categories;
+    var seen = {}, out = [];
+    TRIP.stops.forEach(function (s) {
+      if (s.category && !seen[s.category]) {
+        seen[s.category] = true;
+        out.push({ id: s.category, label: s.category });
+      }
+    });
+    return out;
+  }
+
+  /* ---------- header copy ---------- */
+  var title = TRIP.title || 'Journey';
+  document.title = title + ' | Journey map';
+  var desc = document.querySelector('meta[name="description"]');
+  if (desc) desc.setAttribute('content', title + (TRIP.dates ? ', ' + TRIP.dates : '') + '. Interactive journey map.');
+  el('trip-title').textContent = title;
+  var subBits = [];
+  if (TRIP.dates) subBits.push(TRIP.dates);
+  if (TRIP.subtitle) subBits.push(TRIP.subtitle);
+  el('trip-sub').textContent = subBits.join(' · ');
+  el('trip-footer').textContent = TRIP.footer || 'Tap a stop or a leg.';
+  var firmLegs = (TRIP.legs || []).filter(function (l) { return !isOptional(l); });
+  el('stats-line').textContent = [
+    ((TRIP.days || []).length || 0) + ' days',
+    TRIP.stops.length + ' stops',
+    firmLegs.length + ' legs'
+  ].join(' · ');
+
+  (function countdown() {
+    var c = TRIP.countdown;
+    if (!c || !c.start) return;
+    var start = Date.parse(c.start);
+    var end = c.end ? Date.parse(c.end) : start;
+    if (isNaN(start)) return;
+    var now = Date.now();
+    var days = Math.ceil((start - now) / 86400000);
+    var text = '';
+    if (days > 1) text = days + ' days to go';
+    else if (days === 1) text = 'Departs tomorrow';
+    else if (now <= end) text = 'Trip underway';
+    el('countdown').textContent = text;
+  })();
+
+  var highlight = TRIP.highlight;
+  if (highlight && highlight.stopId && stopById[highlight.stopId]) {
+    var hb = el('highlight-btn');
+    hb.classList.remove('hidden');
+    hb.innerHTML = '<svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="#d4613f" aria-hidden="true"><path d="' + HEART + '"/></svg>'
+      + '<span class="min-w-0"><span class="block text-[12px] font-semibold leading-tight">' + esc(highlight.title || 'Highlight') + '</span>'
+      + '<span class="block text-[11px] text-slate-500">' + esc(highlight.when || '') + '</span></span>';
+  }
+
+  /* ---------- filters ---------- */
+  var filters = { modes: {}, day: 'all', category: 'all' };
+  modeIds().forEach(function (id) { filters.modes[id] = true; });
+  var viewMode = TRIP.defaultView || views[0].id || 'region';
+
+  function fillSelect(select, options, allLabel) {
+    select.innerHTML = '';
+    var all = document.createElement('option');
+    all.value = 'all';
+    all.textContent = allLabel;
+    select.appendChild(all);
+    options.forEach(function (opt) {
+      var o = document.createElement('option');
+      o.value = opt.id;
+      o.textContent = opt.label;
+      select.appendChild(o);
+    });
+  }
+  fillSelect(el('filter-day'), (TRIP.days || []).map(function (d) {
+    return { id: d.id, label: d.date || d.title || d.id };
+  }), 'All days');
+  fillSelect(el('filter-category'), categoryList(), 'All places');
+
+  var modeWrap = el('filter-modes');
+  modeIds().forEach(function (id) {
+    var style = modeStyle(id);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.dataset.mode = id;
+    b.setAttribute('aria-pressed', 'true');
+    var dash = style.dash ? ' stroke-dasharray="' + style.dash + '"' : '';
+    b.innerHTML = '<svg width="16" height="6" aria-hidden="true"><line x1="1" y1="3" x2="15" y2="3" stroke="' + style.color + '" stroke-width="2.4" stroke-linecap="round"' + dash + '/></svg>' + esc(style.label);
+    b.addEventListener('click', function () {
+      filters.modes[id] = !filters.modes[id];
+      syncFilterUI();
+      stopTour();
+      if (activeLegId && !legPasses(legById[activeLegId])) map.closePopup();
+      applyVisibility();
+    });
+    modeWrap.appendChild(b);
+  });
+
+  function syncFilterUI() {
+    modeWrap.querySelectorAll('.chip').forEach(function (chip) {
+      chip.setAttribute('aria-pressed', String(filters.modes[chip.dataset.mode] !== false));
+    });
+    el('filter-day').value = filters.day;
+    el('filter-category').value = filters.category;
+  }
+
+  /* ---------- map + tiles ---------- */
+  var map = L.map('map', { zoomControl: false, minZoom: 2, maxZoom: 18, zoomSnap: 0.25 });
+  /*
+   * Basemap chain. CARTO Voyager is used only when a key is set
+   * (TRIP.cartoApiKey, or ?cartoKey= once, remembered in this browser).
+   * Otherwise Esri World Topo, then Esri World Street. OpenStreetMap is
+   * last, and only on http(s) pages: from file:// the tile servers
+   * answer 403 because the page sends no Referer. A keyless CARTO URL
+   * returns a placeholder image, so it is never requested without a key.
+   * useTileProvider drops a layer that records no successful tiles and
+   * at least four errors, then tries the next provider.
+   */
+  var cartoKey = (function () {
+    var k = (TRIP.cartoApiKey || '').trim();
+    try {
+      var fromUrl = new URLSearchParams(location.search).get('cartoKey');
+      if (fromUrl) localStorage.setItem('cartoKey', fromUrl);
+      k = k || fromUrl || localStorage.getItem('cartoKey') || '';
+    } catch (e) { /* storage unavailable */ }
+    return String(k || '').trim();
+  })();
+  var OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  var ESRI_ATTR = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>, sources: Esri, HERE, Garmin, USGS, FAO, NPS, METI, &copy; OpenStreetMap contributors, GIS User Community';
+
+  map.createPane('legHalo').style.zIndex = 395;
+  map.createPane('legs').style.zIndex = 400;
+  map.createPane('tourLine').style.zIndex = 410;
+  map.createPane('arrows').style.zIndex = 590;
+  map.createPane('vehicle').style.zIndex = 640;
+
+  /* ---------- legend (basemap note must exist before tiles) ---------- */
+  var legendBody = el('legend-body');
+  modeIds().forEach(function (id) {
+    var style = modeStyle(id);
+    var row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    var dash = style.dash ? ' stroke-dasharray="' + style.dash + '"' : '';
+    row.innerHTML = '<svg width="28" height="8" aria-hidden="true"><line x1="1" y1="4" x2="27" y2="4" stroke="' + style.color + '" stroke-width="2.6" stroke-linecap="round"' + dash + '/></svg><span>' + esc(style.name) + '</span>';
+    legendBody.appendChild(row);
+  });
+  [
+    { swatch: 'background:#d4613f', label: 'Booked' },
+    { swatch: 'background:#fff;border:2px solid #1b7a8c', label: 'Planned' },
+    { swatch: 'background:#fff;border:2px dashed #d9a648', label: 'Optional idea' }
+  ].forEach(function (item) {
+    var row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML = '<span class="w-2.5 h-2.5 rounded-full" style="' + item.swatch + '"></span><span>' + item.label + '</span>';
+    legendBody.appendChild(row);
+  });
+  var arrowRow = document.createElement('div');
+  arrowRow.className = 'flex items-center gap-2';
+  arrowRow.innerHTML = '<svg width="28" height="12" viewBox="0 0 28 12" aria-hidden="true"><line x1="1" y1="6" x2="16" y2="6" stroke="#64748b" stroke-width="2"/><path d="M14 2L25 6L14 10L16.5 6Z" fill="#64748b"/></svg><span>Direction of travel</span>';
+  legendBody.appendChild(arrowRow);
+  var baseNote = document.createElement('p');
+  baseNote.id = 'basemap-note';
+  baseNote.className = 'hidden text-[10px] text-sand-600 leading-snug pt-1';
+  legendBody.appendChild(baseNote);
+
+  var tileProviders = [];
+  if (cartoKey) {
+    tileProviders.push({
+      name: 'CARTO Voyager',
+      hideNote: true,
+      create: function () {
+        return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(cartoKey), {
+          attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 20
+        });
+      }
+    });
+  }
+  tileProviders.push({
+    name: 'Esri World Topo',
+    create: function () {
+      return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: ESRI_ATTR,
+        maxNativeZoom: 18,
+        maxZoom: 19
+      });
+    }
+  });
+  tileProviders.push({
+    name: 'Esri World Street',
+    create: function () {
+      return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: ESRI_ATTR,
+        maxNativeZoom: 19,
+        maxZoom: 19
+      });
+    }
+  });
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    tileProviders.push({
+      name: 'OpenStreetMap',
+      create: function () {
+        return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: OSM_ATTR,
+          maxZoom: 19
+        });
+      }
+    });
+  }
+
+  var activeTiles = null;
+  function useTileProvider(i) {
+    if (activeTiles) {
+      map.removeLayer(activeTiles);
+      activeTiles = null;
+    }
+    if (i >= tileProviders.length) {
+      baseNote.textContent = 'Map tiles could not load. Check the connection and reload.';
+      baseNote.classList.remove('hidden');
+      return;
+    }
+    var provider = tileProviders[i];
+    var layer = provider.create();
+    var loads = 0;
+    var errors = 0;
+    var gaveUp = false;
+    function failOver() {
+      if (gaveUp || activeTiles !== layer) return;
+      if (loads === 0 && errors >= 4) {
+        gaveUp = true;
+        console.warn('Journey map: ' + provider.name + ' tiles failed to load. Trying the next basemap.');
+        useTileProvider(i + 1);
+      }
+    }
+    layer.on('tileload', function () { loads += 1; });
+    layer.on('tileerror', function () { errors += 1; failOver(); });
+    layer.addTo(map);
+    activeTiles = layer;
+    if (provider.hideNote) {
+      baseNote.textContent = '';
+      baseNote.classList.add('hidden');
+    } else {
+      baseNote.textContent = provider.name + ' basemap. Add a CARTO key for Voyager tiles.';
+      baseNote.classList.remove('hidden');
+    }
+  }
+  useTileProvider(0);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 120 }).addTo(map);
+
+  var legendOpen = false;
+  function setLegendOpen(open) {
+    legendOpen = open;
+    legendBody.classList.toggle('hidden', !open);
+    el('legend-chevron').style.transform = open ? '' : 'rotate(-90deg)';
+    el('btn-legend').setAttribute('aria-expanded', String(open));
+  }
+  el('btn-legend').addEventListener('click', function () { setLegendOpen(!legendOpen); });
+
+  /* ---------- geometry ---------- */
+  var PROJ = L.CRS.EPSG3857.projection;
+  function makeBezier(fromLL, toLL, k) {
+    var p0 = PROJ.project(L.latLng(fromLL));
+    var p2 = PROJ.project(L.latLng(toLL));
+    var dx = p2.x - p0.x, dy = p2.y - p0.y;
+    var bend = (typeof k === 'number' ? k : 0.2);
+    var c = L.point((p0.x + p2.x) / 2 - dy * bend, (p0.y + p2.y) / 2 + dx * bend);
+    function at(t) {
+      var u = 1 - t;
+      return L.point(u * u * p0.x + 2 * u * t * c.x + t * t * p2.x, u * u * p0.y + 2 * u * t * c.y + t * t * p2.y);
+    }
+    /* Screen degrees from the tangent. 0 is east, clockwise is positive. */
+    function angle(t) {
+      var tx = 2 * (1 - t) * (c.x - p0.x) + 2 * t * (p2.x - c.x);
+      var ty = 2 * (1 - t) * (c.y - p0.y) + 2 * t * (p2.y - c.y);
+      return Math.atan2(-ty, tx) * 180 / Math.PI;
+    }
+    var STEPS = 64, latLngs = [];
+    for (var i = 0; i <= STEPS; i++) latLngs.push(PROJ.unproject(at(i / STEPS)));
+    return { angle: angle, latLngAt: function (t) { return PROJ.unproject(at(t)); }, latLngs: latLngs, steps: STEPS };
+  }
+
+  function arrowIcon(color, size) {
+    return L.divIcon({
+      className: 'arrow-icon',
+      html: '<div><svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5L20 12L5 19L8.5 12Z" fill="' + color + '" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    });
+  }
+  function rotateMarker(marker, deg) {
+    var node = marker.getElement();
+    if (node && node.firstChild) node.firstChild.style.transform = 'rotate(' + deg.toFixed(2) + 'deg)';
+  }
+
+  function segmentsOf(leg) {
+    return (leg.segments || []).filter(function (seg) {
+      return stopById[seg.from] && stopById[seg.to] && stopById[seg.from].coords && stopById[seg.to].coords;
+    });
+  }
+  function touchesGateway(leg) {
+    return segmentsOf(leg).some(function (seg) {
+      return stopById[seg.from].gateway || stopById[seg.to].gateway;
+    });
+  }
+
+  var legState = {};
+  var activeLegId = null;
+  (TRIP.legs || []).forEach(function (leg) {
+    var segs = segmentsOf(leg).map(function (seg) {
+      var look = appearance(leg);
+      var bend = typeof seg.c === 'number' ? seg.c : 0.2;
+      var bz = makeBezier(stopById[seg.from].coords, stopById[seg.to].coords, bend);
+      var group = L.layerGroup();
+      var halo = L.polyline(bz.latLngs, {
+        pane: 'legHalo', color: '#fff', weight: 7, opacity: 0, interactive: false, lineCap: 'round'
+      }).addTo(group);
+      var line = L.polyline(bz.latLngs, {
+        pane: 'legs', color: look.color, weight: look.weight, opacity: 0.9, interactive: false,
+        lineCap: 'round', lineJoin: 'round', dashArray: look.dash || null
+      }).addTo(group);
+      var hit = L.polyline(bz.latLngs, { pane: 'legs', color: '#000', weight: 16, opacity: 0 }).addTo(group);
+      hit.on('click', function (e) {
+        L.DomEvent.stopPropagation(e);
+        pauseTourForUser();
+        selectLeg(leg.id, { latlng: e.latlng });
+      });
+      hit.on('mouseover', function () {
+        if (activeLegId !== leg.id) line.setStyle({ weight: look.weight + 1.2 });
+      });
+      hit.on('mouseout', function () {
+        if (activeLegId !== leg.id) styleLeg(leg.id, false);
+      });
+      var mid = L.marker(bz.latLngAt(0.5), { pane: 'arrows', interactive: false, keyboard: false, icon: arrowIcon(look.color, 15) });
+      var end = L.marker(bz.latLngAt(0.95), { pane: 'arrows', interactive: false, keyboard: false, icon: arrowIcon(look.color, 16) });
+      return { from: seg.from, to: seg.to, bend: bend, leg: leg, bz: bz, group: group, halo: halo, line: line, mid: mid, end: end, ret: null, retHalo: null, retLatLngs: null, onMap: false };
+    });
+    if (segs.length) {
+      var target = legReturnTarget(leg);
+      var last = segs[segs.length - 1];
+      if (target && last.to !== target) {
+        var back = addReturnArc(last.group, last.to, target, appearance(leg), last.bend);
+        if (back) { last.ret = back.line; last.retHalo = back.halo; last.retLatLngs = back.latLngs; }
+      }
+      legState[leg.id] = { leg: leg, segs: segs };
+    }
+  });
+  /* A day returnTo is one arc from the last stop of that day back to the base. */
+  (TRIP.days || []).forEach(function (day) {
+    if (!returnArcsOn() || !day.returnTo || !stopById[day.returnTo]) return;
+    var lastId = null;
+    var lastLeg = null;
+    (day.entries || []).forEach(function (entry) {
+      if (entry.type === 'stop' && stopById[entry.id]) lastId = entry.id;
+      if (entry.type === 'note' && entry.stopId && stopById[entry.stopId]) lastId = entry.stopId;
+      if (entry.type === 'leg' && legById[entry.id] && segmentsOf(legById[entry.id]).length) {
+        lastId = segmentsOf(legById[entry.id]).slice(-1)[0].to;
+        lastLeg = legById[entry.id];
+      }
+    });
+    if (!lastId || lastId === day.returnTo || !legState[lastLeg && lastLeg.id]) return;
+    if (lastLeg && legReturnTarget(lastLeg) === day.returnTo) return;
+    var host = legState[lastLeg.id].segs[legState[lastLeg.id].segs.length - 1];
+    if (host.ret) return;
+    var back = addReturnArc(host.group, lastId, day.returnTo, appearance(lastLeg), 0.28);
+    if (back) { host.ret = back.line; host.retHalo = back.halo; host.retLatLngs = back.latLngs; }
+  });
+
+  function layoutArrows(seg) {
+    if (!seg.onMap) return;
+    var pts = seg.bz.latLngs.map(function (ll) { return map.latLngToLayerPoint(ll); });
+    var cum = [0];
+    for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    var total = cum[cum.length - 1];
+    function tAt(d) {
+      if (d <= 0) return 0;
+      if (d >= total) return 1;
+      var i = 1;
+      while (cum[i] < d) i++;
+      return (i - 1 + (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1)) / seg.bz.steps;
+    }
+    function place(marker, show, t) {
+      if (show) {
+        marker.setLatLng(seg.bz.latLngAt(t));
+        if (!seg.group.hasLayer(marker)) seg.group.addLayer(marker);
+        rotateMarker(marker, seg.bz.angle(t));
+      } else if (seg.group.hasLayer(marker)) seg.group.removeLayer(marker);
+    }
+    place(seg.mid, total >= 70, 0.5);
+    place(seg.end, total >= 110, tAt(Math.max(0, total - 22)));
+  }
+  function layoutAllArrows() {
+    Object.keys(legState).forEach(function (id) {
+      legState[id].segs.forEach(layoutArrows);
+    });
+  }
+  map.on('zoomend viewreset', layoutAllArrows);
+
+  /* ---------- markers ---------- */
+  var markers = {};
+  var activeStopId = null;
+  var highlightStopId = highlight && highlight.stopId;
+
+  function stopIcon(s, active) {
+    var st = statusInfo(s);
+    var filled = !!st.filled;
+    var heart = s.id === highlightStopId
+      ? '<span class="wp-heart"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d4613f" aria-hidden="true"><path d="' + HEART + '"/></svg></span>'
+      : '';
+    var dotStyle = filled ? 'background:' + st.color + ';border-color:#fff' : '';
+    return L.divIcon({
+      className: '',
+      html: '<div class="wp ' + (active ? 'is-active' : '') + '" style="color:' + st.color + '">'
+        + (active ? '<div class="wp-ring"></div>' : '')
+        + '<div class="wp-dot ' + (filled ? 'is-filled' : '') + ' ' + (st.dashed ? 'is-idea' : '') + '" style="' + dotStyle + '">' + esc(s.n || '') + '</div>'
+        + heart + '</div>',
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+      popupAnchor: [0, -14],
+      tooltipAnchor: [0, -15]
+    });
+  }
+
+  function linkRow(links) {
+    var html = '';
+    (links || []).forEach(function (link) {
+      var href = safeUrl(link && link.url);
+      if (!href) return;
+      html += '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[12px] font-medium text-ocean-600 hover:text-ocean-900">'
+        + esc(link.label || 'Link')
+        + '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>';
+    });
+    return html ? '<div class="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap gap-x-3 gap-y-1">' + html + '</div>' : '';
+  }
+  function stopPopupHtml(s) {
+    var st = statusInfo(s);
+    var lines = (s.lines || []).map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('');
+    var hi = (s.id === highlightStopId && highlight)
+      ? '<p class="mt-1.5 text-[11px] font-medium text-lava-600">' + esc(highlight.title || '') + (highlight.note ? '. ' + esc(highlight.note) : '') + '</p>'
+      : '';
+    return '<div style="width:min(280px, calc(100vw - 64px))" class="p-3.5 pr-8">'
+      + '<div class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide" style="color:' + st.color + '">'
+      + '<span class="w-1.5 h-1.5 rounded-full" style="background:' + st.color + '"></span>' + esc(st.label) + '</div>'
+      + '<h3 class="text-[14px] font-semibold text-ocean-900 leading-snug mt-1">' + esc(s.name) + '</h3>'
+      + (s.when ? '<div class="text-[12px] text-slate-500">' + esc(s.when) + '</div>' : '')
+      + hi
+      + (lines ? '<ul class="mt-2 space-y-1 text-[12px] text-slate-600 list-disc pl-4">' + lines + '</ul>' : '')
+      + (s.note ? '<p class="mt-2 text-[11px] text-slate-500">' + esc(s.note) + '</p>' : '')
+      + refChips(s.refs)
+      + linkRow(s.links)
+      + '</div>';
+  }
+  function popupOpts() {
+    var mobile = window.innerWidth < 768;
+    /* The view switcher covers the top of the map. On a phone the popup
+       title and close button need more room or they sit underneath it. */
+    return {
+      maxWidth: 320,
+      autoPanPaddingTopLeft: [16, mobile ? 120 : 76],
+      autoPanPaddingBottomRight: [16, 200]
+    };
+  }
+  function applyPopupChrome(popup) {
+    if (!popup) return;
+    var opts = popupOpts();
+    popup.options.maxWidth = opts.maxWidth;
+    popup.options.autoPanPaddingTopLeft = opts.autoPanPaddingTopLeft.slice();
+    popup.options.autoPanPaddingBottomRight = opts.autoPanPaddingBottomRight.slice();
+  }
+  function refreshAllPopups() {
+    Object.keys(markers).forEach(function (id) {
+      if (markers[id] && markers[id].getPopup) applyPopupChrome(markers[id].getPopup());
+    });
+    if (typeof legPopup !== 'undefined' && legPopup) applyPopupChrome(legPopup);
+  }
+
+  TRIP.stops.forEach(function (s) {
+    if (!s.coords) return;
+    var m = L.marker(s.coords, {
+      icon: stopIcon(s, false),
+      title: s.name,
+      alt: s.name,
+      riseOnHover: true,
+      zIndexOffset: s.id === highlightStopId ? 800 : (s.status === 'base' ? 700 : (isIdeaStop(s) ? 300 : 500))
+    });
+    m.bindPopup(stopPopupHtml(s), popupOpts());
+    m.bindTooltip(s.name, { className: 'stop-tip', direction: 'top', opacity: 1 });
+    m.on('click', function () {
+      pauseTourForUser();
+      clearLegHighlight();
+      setActiveStop(s.id);
+      markActive('stop-' + s.id);
+    });
+    m.on('popupopen', function () { m.closeTooltip(); });
+    markers[s.id] = m;
+  });
+
+  function setActiveStop(id) {
+    if (activeStopId && markers[activeStopId]) markers[activeStopId].setIcon(stopIcon(stopById[activeStopId], false));
+    activeStopId = id;
+    if (id && markers[id]) markers[id].setIcon(stopIcon(stopById[id], true));
+  }
+
+  /* ---------- visibility ---------- */
+  function legPasses(leg) {
+    if (!leg) return false;
+    var key = isOptional(leg) ? 'idea' : leg.mode;
+    if (filters.modes[key] === false) return false;
+    if (filters.day !== 'all' && leg.day !== filters.day) return false;
+    return true;
+  }
+  function stopPassesCategory(s) {
+    return filters.category === 'all' || s.category === filters.category;
+  }
+  function stopsOnSelectedDay() {
+    var ids = {};
+    if (filters.day === 'all') return null;
+    var day = dayById[filters.day];
+    (day && day.entries || []).forEach(function (entry) {
+      if (entry.type === 'stop' && entry.id) ids[entry.id] = true;
+      if (entry.stopId) ids[entry.stopId] = true;
+      if (entry.type === 'leg' && legById[entry.id]) {
+        segmentsOf(legById[entry.id]).forEach(function (seg) { ids[seg.from] = true; ids[seg.to] = true; });
+      }
+    });
+    (TRIP.legs || []).forEach(function (leg) {
+      if (leg.day === filters.day) segmentsOf(leg).forEach(function (seg) { ids[seg.from] = true; ids[seg.to] = true; });
+    });
+    return ids;
+  }
+  function legVisible(leg) {
+    if (!legState[leg.id] || !legPasses(leg)) return false;
+    if (viewMode !== 'full' && touchesGateway(leg)) return false;
+    return true;
+  }
+  function stopVisible(s) {
+    if (!stopPassesCategory(s)) return false;
+    if (isIdeaStop(s) && filters.modes.idea === false) return false;
+    if (viewMode !== 'full' && s.gateway) return false;
+    var dayIds = stopsOnSelectedDay();
+    if (dayIds && !dayIds[s.id]) return false;
+    return true;
+  }
+  function styleLeg(id, hi) {
+    var st = legState[id];
+    if (!st) return;
+    var look = appearance(st.leg);
+    var dim = tour.active && !hi;
+    st.segs.forEach(function (seg) {
+      seg.line.setStyle({
+        color: hi ? look.hi : look.color,
+        weight: look.weight + (hi ? 1.6 : 0),
+        opacity: dim ? 0.28 : (hi ? 1 : 0.9)
+      });
+      seg.halo.setStyle({ opacity: hi ? 0.9 : 0, weight: hi ? 9 : 7 });
+      if (seg.ret) {
+        seg.ret.setStyle({
+          color: hi ? look.hi : look.color,
+          weight: Math.max(2.6, look.weight - 0.2) + (hi ? 0.7 : 0),
+          opacity: dim ? 0.4 : (hi ? 1 : 0.9)
+        });
+      }
+      if (seg.retHalo) seg.retHalo.setStyle({ opacity: dim ? 0.4 : 0.95, weight: hi ? 10 : 8 });
+      if (hi && seg.onMap) seg.line.bringToFront();
+    });
+  }
+  function restyleAll() {
+    (TRIP.legs || []).forEach(function (l) { styleLeg(l.id, l.id === activeLegId); });
+  }
+  function applyVisibility() {
+    (TRIP.legs || []).forEach(function (leg) {
+      var st = legState[leg.id];
+      if (!st) return;
+      var vis = legVisible(leg);
+      st.segs.forEach(function (seg) {
+        if (vis && !seg.onMap) { seg.group.addTo(map); seg.onMap = true; }
+        else if (!vis && seg.onMap) { map.removeLayer(seg.group); seg.onMap = false; }
+      });
+    });
+    TRIP.stops.forEach(function (s) {
+      var m = markers[s.id];
+      if (!m) return;
+      var vis = stopVisible(s);
+      if (vis && !map.hasLayer(m)) m.addTo(map);
+      else if (!vis && map.hasLayer(m)) { m.closePopup(); map.removeLayer(m); }
+    });
+    document.querySelectorAll('.tl-item').forEach(function (node) {
+      var vis = true;
+      if (node.dataset.leg) vis = legPasses(legById[node.dataset.leg]);
+      else if (node.dataset.stop) {
+        var s = stopById[node.dataset.stop];
+        vis = !!s && stopPassesCategory(s) && !(isIdeaStop(s) && filters.modes.idea === false);
+      } else if (node.dataset.noteStop) {
+        var ns = stopById[node.dataset.noteStop];
+        vis = !ns || stopPassesCategory(ns);
+      }
+      node.classList.toggle('is-filtered', !vis);
+    });
+    document.querySelectorAll('.tl-day').forEach(function (sec) {
+      if (sec.dataset.day === 'essentials') { sec.classList.remove('is-empty'); return; }
+      var dayOk = filters.day === 'all' || sec.dataset.day === filters.day || (sec.dataset.day === 'ideas' && filters.day === 'all');
+      var any = sec.querySelector('.tl-item:not(.is-filtered)');
+      sec.classList.toggle('is-empty', !dayOk || !any);
+    });
+    if (activeLegId && !legPasses(legById[activeLegId])) activeLegId = null;
+    restyleAll();
+    layoutAllArrows();
+  }
+
+  /* ---------- sidebar ---------- */
+  function statusDot(s) {
+    var st = statusInfo(s);
+    return '<span class="inline-block w-1.5 h-1.5 rounded-full shrink-0" style="background:' + st.color + '" title="' + esc(st.label) + '"></span>';
+  }
+  function itemButton(opts) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.id = opts.id;
+    b.className = 'tl-item w-full text-left flex items-start gap-2.5 px-2.5 py-2 rounded-lg hover:bg-ocean-50/70';
+    Object.keys(opts.data || {}).forEach(function (k) { b.dataset[k] = opts.data[k]; });
+    b.innerHTML = opts.html;
+    b.addEventListener('click', opts.onClick);
+    return b;
+  }
+  function legRow(leg) {
+    var look = appearance(leg);
+    var iconName = (isOptional(leg) && leg.mode && leg.mode !== 'idea') ? modeStyle(leg.mode).icon : look.icon;
+    var dest = null;
+    var segs = segmentsOf(leg);
+    if (segs.length) dest = stopById[segs[segs.length - 1].to];
+    var dot = dest && (dest.status === 'booked' || dest.status === 'base') ? statusDot(dest) : '';
+    var kind = isOptional(leg) && leg.mode && leg.mode !== 'idea'
+      ? 'Optional ' + modeStyle(leg.mode).name.toLowerCase()
+      : look.name;
+    var sub = leg.subtitle || [leg.when, kind].filter(Boolean).join(' · ');
+    return itemButton({
+      id: 'tl-leg-' + leg.id,
+      data: { leg: leg.id },
+      html: '<span class="mt-0.5 shrink-0" style="color:' + look.color + '">' + (ICONS[iconName] || ICONS.car) + '</span>'
+        + '<span class="min-w-0 flex-1"><span class="flex items-center gap-1.5 text-[13px] font-medium text-ocean-900 leading-snug">'
+        + esc(leg.title) + dot + '</span>'
+        + '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(sub) + '</span>'
+        + refChips(leg.refs) + '</span>',
+      onClick: function () { pauseTourForUser(); selectLeg(leg.id, { fit: true }); }
+    });
+  }
+  function stopRow(s) {
+    var st = statusInfo(s);
+    var bg = st.filled ? 'background:' + st.color + ';color:#fff;border-color:#fff' : '';
+    return itemButton({
+      id: 'tl-stop-' + s.id,
+      data: { stop: s.id },
+      html: '<span class="mt-0.5 shrink-0 w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center text-[10px] font-semibold" style="color:' + st.color + ';border-color:' + st.color + ';' + bg + '">' + esc(s.n || '') + '</span>'
+        + '<span class="min-w-0 flex-1"><span class="flex items-center gap-1.5 text-[13px] font-medium text-ocean-900 leading-snug">' + esc(s.name) + '</span>'
+        + '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(s.subtitle || s.when || st.label) + '</span>'
+        + refChips(s.refs) + '</span>',
+      onClick: function () { pauseTourForUser(); focusStop(s.id); }
+    });
+  }
+  function noteRow(entry, idx, dayId) {
+    return itemButton({
+      id: 'tl-note-' + dayId + '-' + idx,
+      data: entry.stopId ? { noteStop: entry.stopId } : {},
+      html: '<span class="mt-0.5 shrink-0 text-ocean-600">' + ICONS.stay + '</span>'
+        + '<span class="min-w-0 flex-1"><span class="block text-[13px] font-medium text-ocean-900 leading-snug">' + esc(entry.title || 'Stay put') + '</span>'
+        + (entry.text ? '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(entry.text) + '</span>' : '') + '</span>',
+      onClick: function () {
+        pauseTourForUser();
+        if (entry.stopId) focusStop(entry.stopId);
+      }
+    });
+  }
+  function daySection(day, label, sub) {
+    var sec = document.createElement('section');
+    sec.className = 'tl-day pt-3';
+    sec.dataset.day = day;
+    sec.innerHTML = '<div class="px-2.5 pb-1 flex items-baseline gap-2"><span class="text-[11px] font-semibold uppercase tracking-wide text-ocean-600">'
+      + esc(label) + '</span>' + (sub ? '<span class="text-[11px] text-slate-400 truncate">' + esc(sub) + '</span>' : '') + '</div>';
+    return sec;
+  }
+  function inlineLinkChips(links) {
+    var html = '';
+    (links || []).forEach(function (link) {
+      var href = safeUrl(link && link.url);
+      if (!href) return;
+      html += '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer" class="ref-chip" style="background:#eef7f9;color:#146272">' + esc(link.label || 'Link') + '</a>';
+    });
+    return html ? '<span class="mt-1 flex flex-wrap">' + html + '</span>' : '';
+  }
+  function renderEssentials(list) {
+    var items = TRIP.essentials || [];
+    if (!items.length) return;
+    var sec = document.createElement('section');
+    sec.className = 'tl-day tl-essentials pt-2';
+    sec.dataset.day = 'essentials';
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'w-full px-2.5 pb-1 flex items-center gap-2 text-left';
+    head.setAttribute('aria-expanded', 'false');
+    head.innerHTML = '<span class="text-[11px] font-semibold uppercase tracking-wide text-ocean-600">Essentials</span>'
+      + '<span class="text-[11px] text-slate-400">' + items.length + '</span>'
+      + '<svg class="ess-chev ml-auto w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" style="transform:rotate(-90deg)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>';
+    var body = document.createElement('div');
+    body.className = 'hidden';
+    var open = false;
+    function setOpen(next) {
+      open = next;
+      body.classList.toggle('hidden', !open);
+      head.setAttribute('aria-expanded', String(open));
+      var chev = head.querySelector('.ess-chev');
+      if (chev) chev.style.transform = open ? '' : 'rotate(-90deg)';
+    }
+    head.addEventListener('click', function () { setOpen(!open); });
+    items.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'mx-2 mb-1 px-2.5 py-2 rounded-lg bg-ocean-50/60';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full text-left';
+      btn.innerHTML = '<span class="block text-[13px] font-medium text-ocean-900 leading-snug">' + esc(item.title || 'Essential') + '</span>'
+        + (item.text ? '<span class="block text-[11px] text-slate-500 leading-snug mt-0.5">' + esc(item.text) + '</span>' : '')
+        + refChips(item.refs);
+      if (item.stopId && stopById[item.stopId]) {
+        btn.addEventListener('click', function () { pauseTourForUser(); focusStop(item.stopId); });
+      }
+      card.appendChild(btn);
+      var chips = inlineLinkChips(item.links);
+      if (chips) {
+        var row = document.createElement('div');
+        row.innerHTML = chips;
+        card.appendChild(row);
+      }
+      body.appendChild(card);
+    });
+    sec.appendChild(head);
+    sec.appendChild(body);
+    list.appendChild(sec);
+  }
+  function renderSidebar() {
+    var list = el('itinerary-list');
+    list.innerHTML = '';
+    renderEssentials(list);
+    var renderedOptional = {};
+    (TRIP.days || []).forEach(function (day) {
+      var sec = daySection(day.id, day.date || '', day.title || '');
+      (day.entries || []).forEach(function (entry, idx) {
+        if (entry.type === 'leg' && legById[entry.id] && legState[entry.id]) {
+          if (isOptional(legById[entry.id])) return;
+          sec.appendChild(legRow(legById[entry.id]));
+        } else if (entry.type === 'stop' && stopById[entry.id]) {
+          if (isIdeaStop(stopById[entry.id])) return;
+          sec.appendChild(stopRow(stopById[entry.id]));
+        } else if (entry.type === 'note') sec.appendChild(noteRow(entry, idx, day.id));
+      });
+      list.appendChild(sec);
+    });
+    var ideas = daySection('ideas', 'Optional ideas', 'not in the plan');
+    var anyIdea = false;
+    (TRIP.legs || []).forEach(function (leg) {
+      if (!isOptional(leg) || !legState[leg.id] || renderedOptional[leg.id]) return;
+      ideas.appendChild(legRow(leg));
+      renderedOptional[leg.id] = true;
+      anyIdea = true;
+      segmentsOf(leg).forEach(function (seg) { renderedOptional[seg.to] = true; });
+    });
+    TRIP.stops.forEach(function (s) {
+      if (!isIdeaStop(s) || renderedOptional[s.id]) return;
+      ideas.appendChild(stopRow(s));
+      anyIdea = true;
+    });
+    if (anyIdea) list.appendChild(ideas);
+  }
+
+  function markActive(key) {
+    document.querySelectorAll('.tl-item.is-active').forEach(function (n) { n.classList.remove('is-active'); });
+    if (!key) return;
+    var node = el('tl-' + key);
+    if (!node) return;
+    node.classList.add('is-active');
+    var listOpen = isMobile() ? sheetState === 'open' : sidebarOpen;
+    if (listOpen) node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  /* ---------- focus ---------- */
+  function afterMove(fn, ms) {
+    var done = false;
+    function run() { if (done) return; done = true; map.off('moveend', run); fn(); }
+    map.on('moveend', run);
+    setTimeout(run, ms);
+  }
+  function sheetOffsetPx() {
+    if (!isMobile() || sheetState === 'closed') return 0;
+    if (sheetState === 'peek') return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-peek')) || 148;
+    return Math.round(window.innerHeight * 0.42);
+  }
+  function fitPadding() {
+    var sm = window.innerWidth < 768;
+    var bottom = (sm ? 36 : 48) + (sm ? sheetOffsetPx() : 0);
+    return { paddingTopLeft: [sm ? 24 : 48, sm ? 64 : 56], paddingBottomRight: [sm ? 24 : 48, bottom] };
+  }
+  function ensureStopVisible(s) {
+    var changed = false;
+    if (isIdeaStop(s) && filters.modes.idea === false) { filters.modes.idea = true; changed = true; }
+    if (filters.category !== 'all' && s.category && s.category !== filters.category) { filters.category = 'all'; changed = true; }
+    var dayIds = stopsOnSelectedDay();
+    if (dayIds && !dayIds[s.id]) { filters.day = 'all'; changed = true; }
+    if (s.gateway && viewMode !== 'full') { viewMode = 'full'; syncViewUI(); changed = true; }
+    if (changed) { syncFilterUI(); applyVisibility(); }
+  }
+  function focusStop(id) {
+    var s = stopById[id];
+    if (!s || !markers[id]) return;
+    ensureStopVisible(s);
+    clearLegHighlight();
+    map.closePopup();
+    setActiveStop(id);
+    markActive('stop-' + id);
+    collapsePanelForMap();
+    map.flyTo(s.coords, s.zoom || (s.gateway ? 8 : 12), { duration: 0.9 });
+    afterMove(function () { applyPopupChrome(markers[id].getPopup()); markers[id].openPopup(); }, 1300);
+  }
+  function clearLegHighlight() {
+    var prev = activeLegId;
+    activeLegId = null;
+    if (prev) styleLeg(prev, false);
+  }
+  function highlightLeg(id) {
+    var prev = activeLegId;
+    activeLegId = id;
+    if (tour.active) restyleAll();
+    else { if (prev && prev !== id) styleLeg(prev, false); styleLeg(id, true); }
+  }
+  function legBounds(leg) {
+    var pts = [];
+    legState[leg.id].segs.forEach(function (seg) {
+      pts.push.apply(pts, seg.bz.latLngs);
+      if (seg.retLatLngs) pts.push.apply(pts, seg.retLatLngs);
+    });
+    return L.latLngBounds(pts);
+  }
+  function legPopupHtml(leg) {
+    var look = appearance(leg);
+    var names = [];
+    var segs = segmentsOf(leg);
+    if (segs.length) {
+      names.push(stopById[segs[0].from].name);
+      segs.forEach(function (seg) { names.push(stopById[seg.to].name); });
+    }
+    var kind = isOptional(leg) && leg.mode && leg.mode !== 'idea'
+      ? 'Optional ' + modeStyle(leg.mode).name.toLowerCase()
+      : look.name;
+    return '<div style="width:min(260px, calc(100vw - 64px))" class="p-3.5 pr-8">'
+      + '<div class="text-[10px] font-semibold uppercase tracking-wide" style="color:' + look.color + '">' + esc(kind) + '</div>'
+      + '<div class="text-[14px] font-semibold text-ocean-900 leading-snug mt-1">' + esc(leg.title) + '</div>'
+      + (leg.when ? '<div class="text-[12px] text-slate-500">' + esc(leg.when) + '</div>' : '')
+      + (leg.detail ? '<p class="text-[12px] text-slate-600 mt-1.5">' + esc(leg.detail) + '</p>' : '')
+      + (names.length > 2 ? '<p class="text-[11px] text-slate-400 mt-1.5">' + esc(names.join(' to ')) + '</p>' : '')
+      + ((leg.returns || leg.returnTo) ? '<p class="text-[11px] text-slate-400 mt-1.5">Faint line back to the base.</p>' : '')
+      + refChips(leg.refs)
+      + linkRow(leg.links)
+      + '</div>';
+  }
+  var legPopup = L.popup(popupOpts());
+  function selectLeg(id, opts) {
+    opts = opts || {};
+    var leg = legById[id];
+    if (!leg || !legState[id]) return;
+    var changed = false;
+    var key = isOptional(leg) ? 'idea' : leg.mode;
+    if (filters.modes[key] === false) { filters.modes[key] = true; changed = true; }
+    if (filters.day !== 'all' && leg.day && leg.day !== filters.day) { filters.day = 'all'; changed = true; }
+    if (touchesGateway(leg) && viewMode !== 'full') { viewMode = 'full'; syncViewUI(); changed = true; }
+    if (changed) syncFilterUI();
+    applyVisibility();
+    highlightLeg(id);
+    setActiveStop(null);
+    markActive('leg-' + id);
+    var st = legState[id];
+    var openAt = opts.latlng || st.segs[0].bz.latLngAt(0.5);
+    function open() { applyPopupChrome(legPopup); legPopup.setLatLng(openAt).setContent(legPopupHtml(leg)).openOn(map); }
+    if (opts.fit) {
+      collapsePanelForMap();
+      map.closePopup();
+      map.flyToBounds(legBounds(leg), Object.assign({ maxZoom: 11, duration: 0.9 }, fitPadding()));
+      afterMove(open, 1300);
+    } else open();
+  }
+
+  /* ---------- views ---------- */
+  var viewWrap = el('view-switcher');
+  views.forEach(function (view) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'view-btn';
+    b.dataset.view = view.id;
+    b.textContent = view.label;
+    b.addEventListener('click', function () { stopTour(); setView(view.id); });
+    viewWrap.appendChild(b);
+  });
+  function syncViewUI() {
+    viewWrap.querySelectorAll('.view-btn').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.view === viewMode));
+    });
+  }
+  function boundsFor(mode) {
+    var pts = [];
+    TRIP.stops.forEach(function (s) {
+      if (!s.coords) return;
+      if (mode !== 'full' && s.gateway) return;
+      if (isIdeaStop(s) && filters.modes.idea === false) return;
+      pts.push(s.coords);
+    });
+    /* Include the curve itself so a bow is not clipped by the frame. */
+    Object.keys(legState).forEach(function (id) {
+      var leg = legState[id].leg;
+      if (mode !== 'full' && touchesGateway(leg)) return;
+      if (!legPasses(leg)) return;
+      legState[id].segs.forEach(function (seg) {
+        pts.push.apply(pts, seg.bz.latLngs);
+        if (seg.retLatLngs) pts.push.apply(pts, seg.retLatLngs);
+      });
+    });
+    if (!pts.length) TRIP.stops.forEach(function (s) { if (s.coords) pts.push(s.coords); });
+    return L.latLngBounds(pts);
+  }
+  function setView(mode, animate) {
+    viewMode = mode;
+    syncViewUI();
+    applyVisibility();
+    map.closePopup();
+    var opts = Object.assign({ maxZoom: mode === 'full' ? 6 : 10 }, fitPadding());
+    if (animate === false) map.fitBounds(boundsFor(mode), opts);
+    else map.flyToBounds(boundsFor(mode), Object.assign({ duration: 1 }, opts));
+  }
+
+  /* ---------- tour ---------- */
+  var STEP_HOLD_MS = 2200, DRAW_MS = 1500;
+  var tour = { active: false, playing: false, idx: -1, steps: [], token: 0, timer: null, raf: null, stepDone: false, overlay: null, vehicle: null };
+  var tourBar = el('tour-bar');
+
+  function vehicleIcon(leg) {
+    var look = appearance(leg);
+    var inner;
+    if (!isOptional(leg) && leg.mode === 'flight') {
+      inner = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(90 12 12)"><path d="' + PLANE + '" fill="' + look.hi + '" stroke="#fff" stroke-width="1.2"/></g></svg>';
+    } else {
+      inner = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="7.2" fill="' + look.hi + '" stroke="#fff" stroke-width="2"/><path d="M9 7.2L15.2 11 9 14.8z" fill="#fff"/></svg>';
+    }
+    return L.divIcon({ className: 'vehicle-icon', html: '<div>' + inner + '</div>', iconSize: [26, 26], iconAnchor: [13, 13] });
+  }
+  function clearAnim() {
+    if (tour.raf) cancelAnimationFrame(tour.raf);
+    tour.raf = null;
+    if (tour.overlay) { map.removeLayer(tour.overlay); tour.overlay = null; }
+    if (tour.vehicle) { map.removeLayer(tour.vehicle); tour.vehicle = null; }
+  }
+  function animateLeg(leg, token, done) {
+    clearAnim();
+    var pts = [], angles = [];
+    legState[leg.id].segs.forEach(function (seg) {
+      seg.bz.latLngs.forEach(function (ll, i) {
+        pts.push(ll);
+        angles.push(seg.bz.angle(i / seg.bz.steps));
+      });
+    });
+    if (!pts.length) { done(); return; }
+    var look = appearance(leg);
+    tour.overlay = L.polyline([], {
+      pane: 'tourLine', color: look.hi, weight: 5, opacity: 0.95, lineCap: 'round', interactive: false
+    }).addTo(map);
+    tour.vehicle = L.marker(pts[0], { pane: 'vehicle', interactive: false, keyboard: false, icon: vehicleIcon(leg) }).addTo(map);
+    var dur = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : DRAW_MS * (legState[leg.id].segs.length > 1 ? 1.45 : 1);
+    var t0 = performance.now();
+    function frame(now) {
+      if (token !== tour.token) return;
+      var p = Math.min(1, (now - t0) / dur);
+      var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      var n = Math.max(1, Math.round(e * (pts.length - 1)));
+      tour.overlay.setLatLngs(pts.slice(0, n + 1));
+      tour.vehicle.setLatLng(pts[n]);
+      rotateMarker(tour.vehicle, angles[n] || 0);
+      if (p < 1) tour.raf = requestAnimationFrame(frame);
+      else { tour.raf = null; done(); }
+    }
+    tour.raf = requestAnimationFrame(frame);
+  }
+  function renderDots() {
+    var wrap = el('tour-dots');
+    wrap.innerHTML = '';
+    if (tour.steps.length > 18) return;
+    tour.steps.forEach(function (leg, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'h-1 flex-1 rounded-full ' + (i < tour.idx ? 'bg-ocean-500' : i === tour.idx ? 'bg-ocean-900' : 'bg-ocean-100');
+      b.setAttribute('aria-label', 'Go to step ' + (i + 1) + ': ' + leg.title);
+      b.addEventListener('click', function () { goToStep(i); });
+      wrap.appendChild(b);
+    });
+  }
+  function syncPlayUI() {
+    var playing = tour.active && tour.playing;
+    el('icon-play').classList.toggle('hidden', playing);
+    el('icon-pause').classList.toggle('hidden', !playing);
+    el('label-play-tour').textContent = playing ? 'Pause' : (tour.active ? 'Resume' : 'Play journey');
+    el('btn-play-tour').setAttribute('aria-label', el('label-play-tour').textContent);
+    el('tb-play').classList.toggle('hidden', playing);
+    el('tb-pause').classList.toggle('hidden', !playing);
+    el('btn-tour-prev').disabled = tour.idx <= 0;
+    el('btn-tour-next').disabled = tour.idx >= tour.steps.length - 1;
+  }
+  function goToStep(i) {
+    if (!tour.active || !tour.steps.length) return;
+    i = Math.max(0, Math.min(tour.steps.length - 1, i));
+    var token = ++tour.token;
+    clearTimeout(tour.timer);
+    clearAnim();
+    tour.idx = i;
+    tour.stepDone = false;
+    var leg = tour.steps[i];
+    if (touchesGateway(leg) && viewMode !== 'full') { viewMode = 'full'; syncViewUI(); applyVisibility(); }
+    map.closePopup();
+    highlightLeg(leg.id);
+    setActiveStop(null);
+    markActive('leg-' + leg.id);
+    el('tour-meta').textContent = (i + 1) + ' / ' + tour.steps.length + (leg.when ? ' · ' + leg.when : '');
+    el('tour-title').textContent = leg.title;
+    el('tour-progress').style.width = ((i + 1) / tour.steps.length * 100) + '%';
+    renderDots();
+    syncPlayUI();
+    var pad = fitPadding();
+    pad.paddingBottomRight = [pad.paddingBottomRight[0], (isMobile() ? sheetOffsetPx() : 0) + tourBar.offsetHeight + 28];
+    map.flyToBounds(legBounds(leg), Object.assign({ maxZoom: 11, duration: 1.05 }, pad));
+    afterMove(function () {
+      if (token !== tour.token) return;
+      animateLeg(leg, token, function () {
+        if (token !== tour.token) return;
+        var segs = segmentsOf(leg);
+        var dest = segs.length ? segs[segs.length - 1].to : null;
+        if (dest) setActiveStop(dest);
+        tour.stepDone = true;
+        if (tour.playing) scheduleNext(token);
+      });
+    }, 1400);
+  }
+  function scheduleNext(token) {
+    clearTimeout(tour.timer);
+    tour.timer = setTimeout(function () {
+      if (token !== tour.token || !tour.playing) return;
+      if (tour.idx >= tour.steps.length - 1) finishTour();
+      else goToStep(tour.idx + 1);
+    }, STEP_HOLD_MS);
+  }
+  function toast(msg) {
+    var t = el('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function () { t.classList.add('hidden'); }, 2600);
+  }
+  function startTour() {
+    tour.steps = (TRIP.legs || []).filter(function (leg) {
+      return legState[leg.id] && !isOptional(leg) && leg.day && legPasses(leg);
+    });
+    if (!tour.steps.length) { toast('Turn a route layer back on to play the journey.'); return; }
+    tour.viewBefore = viewMode;
+    tour.active = true;
+    tour.playing = true;
+    tourBar.classList.remove('hidden');
+    el('legend').classList.add('hidden');
+    collapsePanelForMap();
+    goToStep(0);
+  }
+  function pauseTour() { tour.playing = false; clearTimeout(tour.timer); syncPlayUI(); }
+  function resumeTour() {
+    tour.playing = true;
+    syncPlayUI();
+    if (tour.stepDone) {
+      if (tour.idx >= tour.steps.length - 1) finishTour();
+      else goToStep(tour.idx + 1);
+    }
+  }
+  function pauseTourForUser() { if (tour.active && tour.playing) pauseTour(); }
+  function stopTour() {
+    if (!tour.active) return null;
+    var previous = tour.viewBefore || null;
+    tour.viewBefore = null;
+    tour.token++;
+    clearTimeout(tour.timer);
+    clearAnim();
+    tour.active = false;
+    tour.playing = false;
+    tour.idx = -1;
+    tourBar.classList.add('hidden');
+    el('legend').classList.remove('hidden');
+    activeLegId = null;
+    restyleAll();
+    setActiveStop(null);
+    markActive(null);
+    syncPlayUI();
+    return previous;
+  }
+  function finishTour() {
+    var previous = stopTour();
+    toast(TRIP.doneMessage || 'Journey complete.');
+    if (previous) setView(previous);
+  }
+
+  el('btn-play-tour').addEventListener('click', function () {
+    if (!tour.active) startTour();
+    else if (tour.playing) pauseTour();
+    else resumeTour();
+  });
+  el('btn-tour-toggle').addEventListener('click', function () { tour.playing ? pauseTour() : resumeTour(); });
+  el('btn-tour-prev').addEventListener('click', function () { goToStep(tour.idx - 1); });
+  el('btn-tour-next').addEventListener('click', function () { goToStep(tour.idx + 1); });
+  el('btn-tour-stop').addEventListener('click', function () {
+    var previous = stopTour();
+    if (previous) setView(previous);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target && e.target.tagName) || '';
+    if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+    if (e.code === 'Space' && tag !== 'BUTTON' && tag !== 'A') {
+      e.preventDefault();
+      el('btn-play-tour').click();
+    } else if (e.key === 'ArrowRight' && tour.active) goToStep(tour.idx + 1);
+    else if (e.key === 'ArrowLeft' && tour.active) goToStep(tour.idx - 1);
+    else if (e.key === 'Escape') {
+      if (tour.active) {
+        var previous = stopTour();
+        if (previous) setView(previous);
+      } else if (isMobile() && sheetState === 'open') setSheet('peek');
+      else map.closePopup();
+    }
+  });
+
+  el('filter-day').addEventListener('change', function () {
+    filters.day = el('filter-day').value;
+    stopTour();
+    applyVisibility();
+  });
+  el('filter-category').addEventListener('change', function () {
+    filters.category = el('filter-category').value;
+    stopTour();
+    map.closePopup();
+    applyVisibility();
+  });
+  el('btn-reset-filters').addEventListener('click', function () {
+    modeIds().forEach(function (id) { filters.modes[id] = true; });
+    filters.day = 'all';
+    filters.category = 'all';
+    syncFilterUI();
+    applyVisibility();
+  });
+  if (highlight && highlight.stopId) {
+    el('highlight-btn').addEventListener('click', function () {
+      pauseTourForUser();
+      focusStop(highlight.stopId);
+    });
+  }
+
+  /* ---------- sidebar / bottom sheet ---------- */
+  var sidebar = el('sidebar');
+  var backdrop = el('backdrop');
+  var btnOpen = el('btn-open-sidebar');
+  var sidebarOpen = true;
+  var sheetState = 'peek';
+
+  function isMobile() { return window.innerWidth < 768; }
+  function applyOffset() {
+    var px = 0;
+    if (isMobile() && sheetState === 'peek') px = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-peek')) || 148;
+    document.documentElement.style.setProperty('--sheet-offset', px + 'px');
+  }
+  function paintPanel() {
+    var openSheet = isMobile() && sheetState === 'open';
+    sidebar.classList.toggle('is-open', isMobile() && sheetState === 'open');
+    sidebar.classList.toggle('is-peek', isMobile() && sheetState === 'peek');
+    sidebar.classList.toggle('is-collapsed', isMobile() ? sheetState === 'closed' : !sidebarOpen);
+    sidebar.setAttribute('aria-hidden', String(isMobile() ? sheetState === 'closed' : !sidebarOpen));
+    var showOpenBtn = isMobile() ? sheetState === 'closed' : !sidebarOpen;
+    btnOpen.classList.toggle('hidden', !showOpenBtn);
+    btnOpen.classList.toggle('inline-flex', showOpenBtn);
+    var showBd = openSheet;
+    backdrop.classList.toggle('opacity-0', !showBd);
+    backdrop.classList.toggle('pointer-events-none', !showBd);
+    el('sheet-handle').setAttribute('aria-expanded', String(sheetState === 'open'));
+    el('sheet-handle').setAttribute('aria-label', sheetState === 'open' ? 'Collapse itinerary' : 'Expand itinerary');
+    var closeBtn = el('btn-close-sidebar');
+    closeBtn.innerHTML = (isMobile()
+      ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>'
+      : '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>');
+    closeBtn.setAttribute('aria-label', isMobile() ? (sheetState === 'open' ? 'Collapse itinerary' : 'Hide itinerary') : 'Hide itinerary');
+    applyOffset();
+    var start = performance.now();
+    function tick() {
+      map.invalidateSize({ pan: false });
+      if (performance.now() - start < 320) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function setSidebarOpen(open) {
+    sidebarOpen = open;
+    paintPanel();
+    if (open) {
+      var node = document.querySelector('.tl-item.is-active');
+      if (node) node.scrollIntoView({ block: 'nearest' });
+    }
+  }
+  function setSheet(state) {
+    sheetState = state;
+    sidebarOpen = state !== 'closed';
+    paintPanel();
+    if (state === 'open') {
+      var node = document.querySelector('.tl-item.is-active');
+      if (node) node.scrollIntoView({ block: 'nearest' });
+    }
+  }
+  function collapsePanelForMap() {
+    if (isMobile() && sheetState === 'open') setSheet('peek');
+  }
+  el('btn-close-sidebar').addEventListener('click', function () {
+    if (isMobile()) setSheet(sheetState === 'open' ? 'peek' : 'closed');
+    else setSidebarOpen(false);
+  });
+  btnOpen.addEventListener('click', function () {
+    if (isMobile()) setSheet(sheetState === 'closed' ? 'peek' : 'open');
+    else setSidebarOpen(true);
+  });
+  backdrop.addEventListener('click', function () { if (isMobile()) setSheet('peek'); });
+
+  var drag = null;
+  var handle = el('sheet-handle');
+  handle.addEventListener('pointerdown', function (e) {
+    if (!isMobile()) return;
+    drag = { y: e.clientY, moved: false };
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    if (Math.abs(e.clientY - drag.y) > 10) drag.moved = true;
+  });
+  handle.addEventListener('pointerup', function (e) {
+    if (!drag) return;
+    var dy = e.clientY - drag.y;
+    var moved = drag.moved;
+    drag = null;
+    if (!moved) { setSheet(sheetState === 'open' ? 'peek' : 'open'); return; }
+    if (dy < -28) setSheet('open');
+    else if (dy > 28) setSheet(sheetState === 'open' ? 'peek' : 'closed');
+  });
+  handle.addEventListener('pointercancel', function () { drag = null; });
+
+  var lastMobile = isMobile();
+  window.addEventListener('resize', function () {
+    map.invalidateSize();
+    refreshAllPopups();
+    var m = isMobile();
+    if (m !== lastMobile) {
+      lastMobile = m;
+      if (m) setSheet('peek');
+      else setSidebarOpen(true);
+    } else applyOffset();
+  });
+  map.on('click', function () {
+    if (!tour.active) { clearLegHighlight(); markActive(null); setActiveStop(null); }
+  });
+
+  /* ---------- spreadsheet export ---------- */
+  var TIMELINE_COLS = ['Date', 'Day label', 'Start time', 'End time', 'Type', 'Title', 'From', 'To', 'Place', 'Transport mode', 'Status', 'Refs', 'Notes'];
+  function guardSheetText(value) {
+    var s = value == null ? '' : String(value);
+    if (/^[=+\-@]/.test(s)) return "'" + s;
+    return s;
+  }
+  function csvField(value) {
+    var s = value == null ? '' : String(value);
+    if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function tsvField(value) {
+    return String(value == null ? '' : value).replace(/[\t\r\n]+/g, ' ');
+  }
+  function hyperlinkFormula(url, label) {
+    var safeLabel = String(label || 'Link').replace(/"/g, '""');
+    var safeUrlText = String(url).replace(/"/g, '""');
+    return '=HYPERLINK("' + safeUrlText + '","' + safeLabel + '")';
+  }
+  function tripSlug() {
+    var raw = String(TRIP.slug || TRIP.title || 'journey').toLowerCase();
+    if (raw.normalize) raw = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var slug = raw.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return slug || 'journey';
+  }
+  function clockFrom(when, item) {
+    var start = item && item.start ? String(item.start) : '';
+    var end = item && item.end ? String(item.end) : '';
+    if ((!start || !end) && when) {
+      var both = String(when).match(/(\d{1,2}:\d{2})\s*(?:to|-)\s*(\d{1,2}:\d{2})/);
+      if (both) {
+        if (!start) start = both[1];
+        if (!end) end = both[2];
+      } else if (!start) {
+        var one = String(when).match(/(\d{1,2}:\d{2})/);
+        if (one) start = one[1];
+      }
+    }
+    return { start: start, end: end };
+  }
+  function sheetStatus(value, optional, refs) {
+    if (optional || value === 'idea' || value === 'optional') return 'optional';
+    if (value === 'booked' || value === 'base') return 'booked';
+    if (value === 'planned') return 'planned';
+    if (refList(refs).length) return 'booked';
+    return 'planned';
+  }
+  function isMapLink(link) {
+    var label = String(link.label || '').toLowerCase();
+    var url = String(link.url || '').toLowerCase();
+    return label.indexOf('map') !== -1 || url.indexOf('google.com/maps') !== -1 || url.indexOf('openstreetmap.org') !== -1;
+  }
+  function cleanLinks(list) {
+    var out = [];
+    (list || []).forEach(function (link) {
+      var href = safeUrl(link && link.url);
+      if (!href) return;
+      out.push({ label: link.label || 'Link', url: href });
+    });
+    return out;
+  }
+  function splitLinks(list) {
+    var links = cleanLinks(list);
+    var mapLink = null;
+    var explore = [];
+    links.forEach(function (link) {
+      if (!mapLink && isMapLink(link)) mapLink = link;
+      else explore.push(link);
+    });
+    return { mapLink: mapLink, explore: explore, all: links.map(function (link) { return link.url; }).join(' ') };
+  }
+  function blankRow() {
+    var row = {};
+    TIMELINE_COLS.forEach(function (col) { row[col] = ''; });
+    row._map = null;
+    row._explore = [];
+    row._all = '';
+    return row;
+  }
+  function legTimelineRow(leg, day) {
+    var segs = segmentsOf(leg);
+    var from = segs.length ? stopById[segs[0].from] : null;
+    var to = segs.length ? stopById[segs[segs.length - 1].to] : null;
+    var when = leg.when || '';
+    var clock = clockFrom(when, leg);
+    var row = blankRow();
+    row.Date = day && day.date ? day.date : '';
+    row['Day label'] = day && day.title ? day.title : (isOptional(leg) ? 'Optional' : '');
+    row['Start time'] = clock.start;
+    row['End time'] = clock.end;
+    row.Type = isOptional(leg) ? 'idea' : (leg.mode || 'activity');
+    row.Title = leg.title || '';
+    row.From = from ? from.name : '';
+    row.To = to ? to.name : '';
+    row.Place = to ? to.name : '';
+    row['Transport mode'] = leg.mode || '';
+    row.Status = sheetStatus(leg.status, isOptional(leg), leg.refs);
+    row.Refs = refList(leg.refs).join('; ');
+    row.Notes = [leg.detail, leg.subtitle, (leg.returns || leg.returnTo) ? 'Faint line back to the base' : ''].filter(Boolean).join(' ');
+    var links = splitLinks(leg.links);
+    row._map = links.mapLink;
+    row._explore = links.explore;
+    row._all = links.all;
+    return row;
+  }
+  function stopTimelineRow(stop, day) {
+    var when = stop.when || '';
+    var clock = clockFrom(when, stop);
+    var row = blankRow();
+    row.Date = day && day.date ? day.date : '';
+    row['Day label'] = day && day.title ? day.title : (isIdeaStop(stop) ? 'Optional' : '');
+    row['Start time'] = clock.start;
+    row['End time'] = clock.end;
+    row.Type = isIdeaStop(stop) ? 'idea' : 'stop';
+    row.Title = stop.name || '';
+    row.Place = stop.name || '';
+    row.Status = sheetStatus(stop.status, isIdeaStop(stop), stop.refs);
+    row.Refs = refList(stop.refs).join('; ');
+    row.Notes = [].concat(stop.lines || [], stop.note ? [stop.note] : [], stop.subtitle ? [stop.subtitle] : []).join(' ');
+    var links = splitLinks(stop.links);
+    row._map = links.mapLink;
+    row._explore = links.explore;
+    row._all = links.all;
+    return row;
+  }
+  function noteTimelineRow(entry, day) {
+    var place = entry.stopId && stopById[entry.stopId] ? stopById[entry.stopId] : null;
+    var clock = clockFrom(entry.when || '', entry);
+    var row = blankRow();
+    row.Date = day && day.date ? day.date : '';
+    row['Day label'] = day && day.title ? day.title : '';
+    row['Start time'] = clock.start;
+    row['End time'] = clock.end;
+    row.Type = 'activity';
+    row.Title = entry.title || 'Stay put';
+    row.Place = place ? place.name : '';
+    row.Status = 'planned';
+    row.Notes = entry.text || '';
+    if (place) {
+      var links = splitLinks(place.links);
+      row._map = links.mapLink;
+      row._explore = links.explore;
+      row._all = links.all;
+    }
+    return row;
+  }
+  function essentialTimelineRow(item) {
+    var place = item.stopId && stopById[item.stopId] ? stopById[item.stopId] : null;
+    var row = blankRow();
+    row['Day label'] = 'Essentials';
+    row.Type = 'essential';
+    row.Title = item.title || 'Essential';
+    row.Place = place ? place.name : '';
+    row.Status = sheetStatus(item.status, false, item.refs);
+    row.Refs = refList(item.refs).join('; ');
+    row.Notes = item.text || '';
+    var links = splitLinks(item.links);
+    row._map = links.mapLink;
+    row._explore = links.explore;
+    row._all = links.all;
+    return row;
+  }
+  function timelineRows() {
+    var rows = (TRIP.essentials || []).map(essentialTimelineRow);
+    var seenLegs = {};
+    var seenStops = {};
+    (TRIP.days || []).forEach(function (day) {
+      (day.entries || []).forEach(function (entry) {
+        if (entry.type === 'leg' && legById[entry.id]) {
+          rows.push(legTimelineRow(legById[entry.id], day));
+          seenLegs[entry.id] = true;
+          segmentsOf(legById[entry.id]).forEach(function (seg) { seenStops[seg.to] = seenStops[seg.to] || false; });
+        } else if (entry.type === 'stop' && stopById[entry.id]) {
+          rows.push(stopTimelineRow(stopById[entry.id], day));
+          seenStops[entry.id] = true;
+        } else if (entry.type === 'note') rows.push(noteTimelineRow(entry, day));
+      });
+    });
+    (TRIP.legs || []).forEach(function (leg) {
+      if (seenLegs[leg.id] || !isOptional(leg)) return;
+      rows.push(legTimelineRow(leg, null));
+      seenLegs[leg.id] = true;
+      segmentsOf(leg).forEach(function (seg) { seenStops[seg.to] = true; });
+    });
+    (TRIP.stops || []).forEach(function (stop) {
+      if (seenStops[stop.id] || !isIdeaStop(stop)) return;
+      rows.push(stopTimelineRow(stop, null));
+    });
+    return rows;
+  }
+  function timelineTable() {
+    var rows = timelineRows();
+    var exploreCount = 0;
+    rows.forEach(function (row) { if (row._explore.length > exploreCount) exploreCount = row._explore.length; });
+    var headers = TIMELINE_COLS.slice();
+    headers.push('Map link');
+    for (var i = 1; i <= exploreCount; i++) headers.push('Explore link ' + i);
+    headers.push('All links');
+    var body = rows.map(function (row) {
+      var cells = TIMELINE_COLS.map(function (col) { return guardSheetText(row[col]); });
+      cells.push(row._map ? hyperlinkFormula(row._map.url, row._map.label) : '');
+      for (var n = 0; n < exploreCount; n++) {
+        var link = row._explore[n];
+        cells.push(link ? hyperlinkFormula(link.url, link.label) : '');
+      }
+      cells.push(guardSheetText(row._all));
+      return cells;
+    });
+    return { headers: headers, body: body };
+  }
+  function timelineCsv() {
+    var table = timelineTable();
+    var lines = [table.headers.map(csvField).join(',')];
+    table.body.forEach(function (cells) { lines.push(cells.map(csvField).join(',')); });
+    return lines.join('\r\n') + '\r\n';
+  }
+  function timelineTsv() {
+    var table = timelineTable();
+    var lines = [table.headers.map(tsvField).join('\t')];
+    table.body.forEach(function (cells) { lines.push(cells.map(tsvField).join('\t')); });
+    return lines.join('\n');
+  }
+  function downloadTimeline() {
+    var csv = '\uFEFF' + timelineCsv();
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = tripSlug() + '-timeline.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    toast('Downloaded ' + a.download);
+  }
+  function copyTimeline() {
+    var text = timelineTsv();
+    function ok() { toast('Copied. Paste into Google Sheets.'); }
+    function fail() { toast('Could not copy. Use Export instead.'); }
+    function fallback() {
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.left = '-9999px';
+      document.body.appendChild(area);
+      area.select();
+      var copied = false;
+      try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+      area.remove();
+      if (copied) ok(); else fail();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else fallback();
+  }
+  el('btn-export').addEventListener('click', downloadTimeline);
+  el('btn-copy-sheets').addEventListener('click', copyTimeline);
+
+  /* ---------- boot ---------- */
+  renderSidebar();
+  syncFilterUI();
+  syncViewUI();
+  syncPlayUI();
+  setLegendOpen(false);
+  if (isMobile()) setSheet('peek');
+  else setSidebarOpen(true);
+  map.fitBounds(boundsFor(viewMode));
+  setView(viewMode, false);
+
+  window.journeyMap = {
+    map: map, setView: setView, startTour: startTour, stopTour: stopTour, goToStep: goToStep,
+    selectLeg: selectLeg, focusStop: focusStop, setSheet: setSheet, filters: filters, tour: tour, legState: legState,
+    timelineCsv: timelineCsv, timelineTsv: timelineTsv, guardSheetText: guardSheetText, tripSlug: tripSlug
+  };
+})();
+</script>
+</body>
+</html>
