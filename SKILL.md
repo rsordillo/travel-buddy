@@ -65,10 +65,16 @@ Then check, before you hand the file over:
 - `gateway: true` is only on the home end of the trip (the place that should disappear on "The trip" view).
 - Optional hops use `"optional": true` and are not also listed inside a day. The engine files them under Optional ideas, and Play journey skips them.
 - A connecting flight or a train with a change is one leg with several segments, in order.
-- Each stop has at least a Google Maps link when you know the place. Add Wikipedia and an official site when a real public page exists.
+- Each stop has at least a map link when you know the place. Add Wikipedia and an official site when a real public page exists.
+- Labels inside one popup are distinct. Two links both called Google Maps are not allowed. Name the place, for example `Map: Tejeda`, `Wikipedia`, `Official site`.
+- Day ids and leg ids must not look alike. Use `d1` for a day and `f1` or `t1` for a leg. A day called `3` and a leg called `3` get mixed up by the day filter and the tour.
 - `cartoApiKey` stays `""` unless they gave you a key.
+- Booking references go in `refs` (a string or a list), not in the prose. The map shows them as chips. Do not invent any.
+- A day trip out and back from the same base is one leg with `"returns": true`, not two heavy arcs on top of each other.
+- Idea rows that need a place line set `subtitle` (for example `Near Meloneras`).
+- Chip wording is `modeStyles`. To label the road chip Drives, set `"drive": { "label": "Drives", "name": "Drive" }`.
 
-Tell them how to open the file (double-click it, or drag it into a browser) and how to add a CARTO key if they want Voyager tiles. The map works without one: it falls back to OpenStreetMap and says so in the legend.
+Tell them how to open the file (double-click it, or drag it into a browser) and how to add a CARTO key if they want Voyager tiles. With no key the map uses Esri World Topo, then Esri World Street if those tiles fail. The legend names that basemap. Voyager hides the note. Export, in the top bar, downloads a CSV of the same trip. You can also write that CSV yourself, next to the HTML, using the columns below.
 
 ## Filling TRIP
 
@@ -119,13 +125,25 @@ Omit `countdown` to hide the "days to go" line. Set `highlight` to `{ "title", "
 
 `zoom` is the level Play and a click fly to. About 8 or 9 for an airport, 12 or 13 for a town.
 
-`links` are `{ "label", "url" }` and must be `http` or `https`. Typical labels are Google Maps, Wikipedia, and Official site. A Google Maps search URL looks like `https://www.google.com/maps/search/?api=1&query=Bryggen+Bergen`.
+`links` are `{ "label", "url" }` and must be `http` or `https`. Each label in that popup must be different. Use `Map: Tejeda`, not a second `Google Maps`. Wikipedia and Official site are the usual other labels. A map search URL looks like `https://www.google.com/maps/search/?api=1&query=Bryggen+Bergen`.
+
+`refs` is one booking reference, or a list of them. The map prints each one as a chip in the popup and in the sidebar. Leave it empty when the traveller did not give you a reference.
+
+`subtitle` is an optional second line. On an idea, that is where "Near Meloneras" belongs.
+
+`essentials` is an optional list pinned above the days: the base hotel, the car, the tickets they must not lose. Each item is `{ "id", "title", "text", "refs", "stopId", "links" }`. `stopId` is the pin a click should open. Omit `essentials` when there is nothing to pin.
 
 Use coordinates you are sure of for public places. If a pin is only approximate, say so in `note`.
 
 ### Legs
 
 `id`, `mode`, `day` (a day id, or `null`), `optional`, `title`, `when`, `detail`, `links`, `segments`.
+
+Do not give a leg the same id as a day. `d1` is a day, `f1` is a leg. Ids that look alike make the day filter and Play journey open the wrong row.
+
+`returns: true` draws a faint arc back to the start of that leg. Use it for a hub day (hotel, sight, hotel again) so several spokes from one base stay readable. A real one-way hop leaves `returns` off. Set `returnArcs` to `"none"` on the trip if you do not want those faint arcs at all. The default is `"faint"`.
+
+`start` and `end` are clock times (`09:10`, `12:05`) used by the spreadsheet export. If you leave them off, the map tries to read a `HH:MM to HH:MM` pair out of `when`.
 
 `mode` is `flight`, `ferry`, `train`, `drive`, `bus`, `walk`, or `idea`. The engine already styles those. `modes` on TRIP lists which chips to show. Include `idea` if anything is optional.
 
@@ -151,7 +169,7 @@ An entry is one of:
 
 Use a note for a day with no transfer. `stopId` is the place a click should open. Do not put optional legs or idea stops in a day. They are collected automatically.
 
-`day` on a leg must match the day that leg appears on, or Play journey and the day filter will disagree.
+`day` on a leg must match the day that leg appears on, or Play journey and the day filter will disagree. The id of the day and the id of the leg still have to be different strings.
 
 ## What the map already does
 
@@ -161,9 +179,10 @@ You do not write any of this. It comes from the template.
 - The itinerary lists the days in order. On a phone it is a bottom sheet: a peek of the title, drag or tap the handle for the full list. The open row and the map stay in sync.
 - Chips filter by transport. The two menus filter by day and by place category. Show all puts them back.
 - "The trip" hides gateway stops. "Full route" brings them, and the long legs home, back into frame.
-- Play journey draws each planned leg in order, with a moving marker. Space starts and pauses. Arrow keys step. Escape closes the tour. Optional ideas are not part of the tour.
+- Play journey draws each planned leg in order, with a moving marker. Space starts and pauses. Arrow keys step. Escape closes the tour and returns the map to the view that was active before Play (The trip, or Island, not whatever the last leg zoomed to). Optional ideas are not part of the tour.
 - A click on a place opens a popup with the notes and the explore links. A click on a line opens the leg.
-- Tiles: if `cartoApiKey` is set, or the page was opened with `?cartoKey=YOUR_KEY` (stored in that browser), the basemap is CARTO Voyager. Otherwise it is OpenStreetMap, and the legend says so. Attribution stays on the map either way.
+- Tiles: if `cartoApiKey` is set, or the page was opened with `?cartoKey=YOUR_KEY` (stored in that browser), the basemap is CARTO Voyager and the legend note stays hidden. With no key the map uses Esri World Topo, then Esri World Street if that layer fails. OpenStreetMap is only tried when the page itself is served over http or https. The legend names the basemap in use and mentions how to add a CARTO key. Attribution stays on the map. The legend starts collapsed so it does not cover the route.
+- Export downloads `<trip-slug>-timeline.csv` (UTF-8 with a BOM, so Excel keeps accents). Copy puts the same table on the clipboard as TSV for Google Sheets. Link columns are `=HYPERLINK("url","label")` formulas, and `All links` repeats the raw URLs. Text that starts with `=`, `+`, `-`, or `@` is prefixed with an apostrophe so it cannot become a formula. You can write this file yourself beside the HTML. Columns, in order: Date, Day label, Start time, End time, Type (flight, ferry, train, drive, bus, walk, stop, activity, or idea), Title, From, To, Place, Transport mode, Status (booked, planned, or optional), Refs, Notes, Map link, Explore link 1 to n, All links.
 
 ## Worked example
 
